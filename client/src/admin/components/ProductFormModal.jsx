@@ -114,21 +114,25 @@ const ProductFormModal = ({ product, categories, onClose, onSave }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full my-8">
-        <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        {/* Fixed Header */}
+        <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-2xl font-bold text-deep-green">
             {product ? 'Edit Product' : 'Add New Product'}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            type="button"
           >
             <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <form onSubmit={handleSubmit} className="space-y-6" id="productForm">
           {/* Basic Information */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">Basic Information</h3>
@@ -400,10 +404,13 @@ const ProductFormModal = ({ product, categories, onClose, onSave }) => {
                 <span>Available</span>
               </label>
             </div>
-          </div>
+            </div>
+          </form>
+        </div>
 
-          {/* Form Actions */}
-          <div className="flex gap-3 justify-end pt-6 border-t">
+        {/* Fixed Footer with Actions */}
+        <div className="border-t p-6 bg-gray-50">
+          <div className="flex gap-3 justify-end">
             <button
               type="button"
               onClick={onClose}
@@ -414,6 +421,7 @@ const ProductFormModal = ({ product, categories, onClose, onSave }) => {
             </button>
             <button
               type="submit"
+              form="productForm"
               className="btn-primary flex items-center gap-2"
               disabled={saving || uploading}
             >
@@ -427,7 +435,7 @@ const ProductFormModal = ({ product, categories, onClose, onSave }) => {
               )}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )
