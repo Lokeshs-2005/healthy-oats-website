@@ -4,12 +4,17 @@ import { errorHandler } from '../src/middleware/errorHandler.js'
 import publicRoutes from '../src/routes/publicRoutes.js'
 import adminRoutes from '../src/routes/adminRoutes.js'
 
+// Initialize Firebase as early as possible (lazy loaded in services)
+import '../src/config/firebase.js'
+
 const app = express()
 
-// CORS configuration
+// CORS configuration - Allow all origins for now
 const corsOptions = {
-  origin: process.env.CORS_ORIGINS?.split(',') || ['*'],
-  credentials: true,
+  origin: '*',
+  credentials: false,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }
 
 // Middleware

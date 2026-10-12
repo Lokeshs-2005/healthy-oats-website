@@ -1,44 +1,62 @@
 import admin from 'firebase-admin'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import dotenv from 'dotenv'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-// Load .env from project root (two levels up from config directory)
-dotenv.config({ path: resolve(__dirname, '../../../.env') })
-
 let db = null
+let isInitialized = false
 
 try {
-  // Initialize Firebase Admin
-  let serviceAccount
-  
-  // Check if Firebase credentials are in environment variable (for Vercel)
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
-    console.log('✓ Using Firebase credentials from environment variable')
-  } else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-    // Fallback to file path (for local development)
-    const { readFileSync } = await import('fs')
-    const fullPath = resolve(__dirname, '../../../', process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
-    serviceAccount = JSON.parse(readFileSync(fullPath, 'utf8'))
-    console.log('✓ Using Firebase credentials from file')
+  // Only initialize if not already initialized
+  if (!admin.apps.length) {
+    let serviceAccount
+    
+    // Check if Firebase credentials are in environment variable (for Vercel)
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+      try {
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
+        console.log('✓ Using Firebase credentials from environment variable')
+      } catch (parseError) {
+        console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:', parseError.message)
+        throw parseError
+      }
+    } else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      // Fallback to file path (for local development)
+      try {
+        const { readFileSync } = await import('fs')
+        const fullPath = resolve(__dirname, '../../../', process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+        serviceAccount = JSON.parse(readFileSync(fullPath, 'utf8'))
+        console.log('✓ Using Firebase credentials from file')
+      } catch (fileError) {
+        console.error('Failed to read Firebase credentials file:', fileError.message)
+        throw fileError
+      }
+    } else {
+      throw new Error('Firebase credentials not configured. Set FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_KEY')
+    }
+    
+    // Initialize Firebase Admin
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    })
+    
+    db = admin.firestore()
+    isInitialized = true
+    console.log('✓ Firebase Admin initialized successfully')
   } else {
-    throw new Error('Firebase credentials not configured')
+    // Already initialized
+    db = admin.firestore()
+    isInitialized = true
+    console.log('✓ Firebase Admin already initialized')
   }
-  
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  })
-  
-  db = admin.firestore()
-  console.log('✓ Firebase Admin initialized')
 } catch (error) {
-  console.error('Firebase initialization error:', error.message)
-  console.warn('⚠️  Running without Firebase. Some features will be unavailable.')
+  console.error('❌ Firebase initialization error:', error.message)
+  console.error('Stack:', error.stack)
+  console.warn('⚠️  Running without Firebase. API endpoints will return errors.')
+  isInitialized = false
 }
 
-export { admin, db }
+export { admin, db, isInitialized }
 export default admin

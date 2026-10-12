@@ -1,59 +1,68 @@
-import { db } from '../config/firebase.js'
+import { db, isInitialized } from '../config/firebase.js'
 import { AppError } from '../middleware/errorHandler.js'
 
 const COLLECTION = 'products'
 
 export const productService = {
   async getAll(filters = {}) {
-    if (!db) throw new AppError('Database not configured', 503)
-
-    // For simple queries without indexes, fetch all and filter in memory
-    let query = db.collection(COLLECTION)
-
-    // Only use single field queries to avoid index requirements
-    if (filters.categoryId && !filters.featured && !filters.available) {
-      query = query.where('categoryId', '==', filters.categoryId)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
     }
 
-    const snapshot = await query.get()
-    let products = []
+    try {
+      // For simple queries without indexes, fetch all and filter in memory
+      let query = db.collection(COLLECTION)
 
-    snapshot.forEach((doc) => {
-      products.push({ id: doc.id, ...doc.data() })
-    })
+      // Only use single field queries to avoid index requirements
+      if (filters.categoryId && !filters.featured && !filters.available) {
+        query = query.where('categoryId', '==', filters.categoryId)
+      }
 
-    // Filter in memory to avoid composite indexes
-    if (filters.categoryId) {
-      products = products.filter(p => p.categoryId === filters.categoryId)
+      const snapshot = await query.get()
+      let products = []
+
+      snapshot.forEach((doc) => {
+        products.push({ id: doc.id, ...doc.data() })
+      })
+
+      // Filter in memory to avoid composite indexes
+      if (filters.categoryId) {
+        products = products.filter(p => p.categoryId === filters.categoryId)
+      }
+
+      if (filters.featured !== undefined) {
+        const isFeatured = filters.featured === 'true' || filters.featured === true
+        products = products.filter(p => p.isFeatured === isFeatured)
+      }
+
+      if (filters.available !== undefined) {
+        const isAvailable = filters.available === 'true' || filters.available === true
+        products = products.filter(p => p.isAvailable === isAvailable)
+      }
+
+      // Sort by createdAt descending (newest first)
+      products.sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0)
+        const dateB = new Date(b.createdAt || 0)
+        return dateB - dateA
+      })
+
+      // Apply limit after filtering
+      if (filters.limit) {
+        return products.slice(0, parseInt(filters.limit))
+      }
+
+      return products
+    } catch (error) {
+      console.error('Error fetching products:', error)
+      throw new AppError('Failed to fetch products', 500)
     }
-
-    if (filters.featured !== undefined) {
-      const isFeatured = filters.featured === 'true' || filters.featured === true
-      products = products.filter(p => p.isFeatured === isFeatured)
-    }
-
-    if (filters.available !== undefined) {
-      const isAvailable = filters.available === 'true' || filters.available === true
-      products = products.filter(p => p.isAvailable === isAvailable)
-    }
-
-    // Sort by createdAt descending (newest first)
-    products.sort((a, b) => {
-      const dateA = new Date(a.createdAt || 0)
-      const dateB = new Date(b.createdAt || 0)
-      return dateB - dateA
-    })
-
-    // Apply limit after filtering
-    if (filters.limit) {
-      return products.slice(0, parseInt(filters.limit))
-    }
-
-    return products
   },
 
   async getBySlug(slug) {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     const snapshot = await db.collection(COLLECTION)
       .where('slug', '==', slug)
@@ -69,7 +78,9 @@ export const productService = {
   },
 
   async create(data) {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     const productData = {
       ...data,
@@ -82,7 +93,9 @@ export const productService = {
   },
 
   async update(id, data) {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     const updateData = {
       ...data,
@@ -100,7 +113,9 @@ export const productService = {
   },
 
   async delete(id) {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     await db.collection(COLLECTION).doc(id).delete()
     return { success: true }

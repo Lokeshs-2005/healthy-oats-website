@@ -1,4 +1,4 @@
-import { db } from '../config/firebase.js'
+import { db, isInitialized } from '../config/firebase.js'
 import { AppError } from '../middleware/errorHandler.js'
 
 const COLLECTION = 'siteSettings'
@@ -6,7 +6,9 @@ const SETTINGS_DOC_ID = 'main'
 
 export const settingsService = {
   async get() {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     const doc = await db.collection(COLLECTION).doc(SETTINGS_DOC_ID).get()
 
@@ -19,7 +21,9 @@ export const settingsService = {
   },
 
   async update(data) {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     const settingsData = {
       ...data,

@@ -1,11 +1,13 @@
-import { db } from '../config/firebase.js'
+import { db, isInitialized } from '../config/firebase.js'
 import { AppError } from '../middleware/errorHandler.js'
 
 const COLLECTION = 'categories'
 
 export const categoryService = {
   async getAll() {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     // Get all categories (no index required)
     const snapshot = await db.collection(COLLECTION).get()
@@ -26,7 +28,9 @@ export const categoryService = {
   },
 
   async create(data) {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     const categoryData = {
       ...data,
@@ -40,7 +44,9 @@ export const categoryService = {
   },
 
   async update(id, data) {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     const updateData = {
       ...data,
@@ -58,7 +64,9 @@ export const categoryService = {
   },
 
   async delete(id) {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     // Check if any products use this category
     const productsSnapshot = await db.collection('products')

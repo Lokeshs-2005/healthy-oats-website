@@ -1,11 +1,13 @@
-import { db } from '../config/firebase.js'
+import { db, isInitialized } from '../config/firebase.js'
 import { AppError } from '../middleware/errorHandler.js'
 
 const COLLECTION = 'addons'
 
 export const addonService = {
   async getAll() {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     const snapshot = await db.collection(COLLECTION).get()
     const addons = []
@@ -18,7 +20,9 @@ export const addonService = {
   },
 
   async create(data) {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     const addonData = {
       ...data,
@@ -31,7 +35,9 @@ export const addonService = {
   },
 
   async update(id, data) {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     const updateData = {
       ...data,
@@ -49,7 +55,9 @@ export const addonService = {
   },
 
   async delete(id) {
-    if (!db) throw new AppError('Database not configured', 503)
+    if (!isInitialized || !db) {
+      throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
 
     await db.collection(COLLECTION).doc(id).delete()
     return { success: true }
