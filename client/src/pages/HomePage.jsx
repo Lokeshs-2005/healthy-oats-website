@@ -104,21 +104,22 @@ const HomePage = () => {
               </div>
             </div>
             
-            <div className="hidden md:block relative">
-              <div className="relative aspect-square">
-                {/* Background decoration */}
-                <div className="absolute inset-0 bg-gradient-to-br from-sage-green/30 to-warm-orange/30 rounded-[3rem] rotate-6"></div>
-                <div className="absolute inset-0 bg-gradient-to-br from-warm-orange/30 to-sage-green/30 rounded-[3rem] -rotate-6"></div>
+            {/* Hero Image - Shows on all devices */}
+            <div className="relative mt-8 md:mt-0">
+              <div className="relative aspect-square max-w-md mx-auto md:max-w-none">
+                {/* Background decoration - only on desktop */}
+                <div className="hidden md:block absolute inset-0 bg-gradient-to-br from-sage-green/30 to-warm-orange/30 rounded-[3rem] rotate-6"></div>
+                <div className="hidden md:block absolute inset-0 bg-gradient-to-br from-warm-orange/30 to-sage-green/30 rounded-[3rem] -rotate-6"></div>
                 
                 {/* Main content with hero image */}
-                <div className="relative bg-white rounded-[3rem] shadow-2xl overflow-hidden h-full">
+                <div className="relative bg-white rounded-2xl md:rounded-[3rem] shadow-xl md:shadow-2xl overflow-hidden h-full">
                   <img 
                     src="/heroImage.png"
                     alt="Delicious healthy oatmeal cups and bowls"
                     className="w-full h-full object-cover"
                     loading="eager"
                   />
-                  {/* Overlay gradient for better text readability if needed */}
+                  {/* Overlay gradient */}
                   <div className="absolute inset-0 bg-gradient-to-t from-deep-green/20 via-transparent to-transparent"></div>
                 </div>
               </div>
