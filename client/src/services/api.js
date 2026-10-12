@@ -50,6 +50,10 @@ export const publicApi = {
   
   // Site Settings
   getSiteSettings: () => api.get('/api/site-settings'),
+  
+  // Orders
+  createOrder: (data) => api.post('/api/orders', data),
+  getOrderByNumber: (orderNumber) => api.get(`/api/orders/${orderNumber}`),
 }
 
 // Admin API endpoints
@@ -78,6 +82,13 @@ export const adminApi = {
       'Content-Type': 'multipart/form-data',
     },
   }),
+  
+  // Orders
+  getOrders: (params) => api.get('/api/admin/orders', { params }),
+  getOrderById: (id) => api.get(`/api/admin/orders/${id}`),
+  updateOrderStatus: (id, status) => api.patch(`/api/admin/orders/${id}/status`, { status }),
+  updatePaymentStatus: (id, paymentStatus) => api.patch(`/api/admin/orders/${id}/payment-status`, { paymentStatus }),
+  getOrderStatistics: () => api.get('/api/admin/orders-statistics'),
 }
 
 export default api

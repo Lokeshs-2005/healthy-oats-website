@@ -1,17 +1,11 @@
+// Load environment variables FIRST before any other imports
+import './config/env.js'
+
 import express from 'express'
 import cors from 'cors'
-import { resolve, dirname } from 'path'
-import { fileURLToPath } from 'url'
-import dotenv from 'dotenv'
 import { errorHandler } from './middleware/errorHandler.js'
 import publicRoutes from './routes/publicRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-// Load .env from project root (two levels up from src directory)
-dotenv.config({ path: resolve(__dirname, '../../.env') })
 
 const app = express()
 const PORT = process.env.PORT || 5000

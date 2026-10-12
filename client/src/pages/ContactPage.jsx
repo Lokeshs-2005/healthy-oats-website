@@ -10,6 +10,7 @@ const ContactPage = () => {
 
   useEffect(() => {
     document.title = 'Contact Us - Healthy Oats'
+    window.scrollTo(0, 0) // Scroll to top
     loadSettings()
   }, [])
 
@@ -46,7 +47,7 @@ const ContactPage = () => {
   }
 
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-20">
       <div className="container-custom">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-deep-green mb-4">

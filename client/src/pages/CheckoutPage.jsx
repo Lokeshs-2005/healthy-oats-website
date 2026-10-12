@@ -1,0 +1,488 @@
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, User, Mail, Phone, MapPin, ShoppingBag, CreditCard } from 'lucide-react'
+import { useCart } from '../contexts/CartContext'
+import { publicApi } from '../services/api'
+import { CURRENCY_SYMBOL } from '../config/constants'
+import LoadingSpinner from '../components/LoadingSpinner'
+
+const CheckoutPage = () => {
+  const navigate = useNavigate()
+  const { cart, getCartTotal, getCartCount } = useCart()
+  const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState({})
+
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    paymentMethod: 'cod', // 'cod' or 'upi'
+    notes: ''
+  })
+
+  useEffect(() => {
+    document.title = 'Checkout - Healthy Oats'
+    window.scrollTo(0, 0) // Scroll to top
+    
+    // Redirect if cart is empty
+    if (cart.length === 0) {
+      navigate('/menu')
+    }
+  }, [cart, navigate])
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+    
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }))
+    }
+  }
+
+  const validateForm = () => {
+    const newErrors = {}
+
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = 'Full name is required'
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required'
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid'
+    }
+
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone number is required'
+    } else if (!/^[0-9]{10}$/.test(formData.phone.replace(/[^0-9]/g, ''))) {
+      newErrors.phone = 'Phone number must be 10 digits'
+    }
+
+    if (!formData.address.trim()) {
+      newErrors.address = 'Address is required'
+    }
+
+    if (!formData.city.trim()) {
+      newErrors.city = 'City is required'
+    }
+
+    if (!formData.state.trim()) {
+      newErrors.state = 'State is required'
+    }
+
+    if (!formData.pincode.trim()) {
+      newErrors.pincode = 'Pincode is required'
+    } else if (!/^[0-9]{6}$/.test(formData.pincode)) {
+      newErrors.pincode = 'Pincode must be 6 digits'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+    if (!validateForm()) {
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const subtotal = getCartTotal()
+      const deliveryCharge = subtotal >= 500 ? 0 : 50
+      const total = subtotal + deliveryCharge
+
+      // If UPI payment, navigate to UPI payment page
+      if (formData.paymentMethod === 'upi') {
+        // Store customer details in sessionStorage for UPI page
+        sessionStorage.setItem('checkoutData', JSON.stringify({
+          ...formData,
+          cart,
+          subtotal,
+          deliveryCharge,
+          total
+        }))
+        navigate('/payment/upi')
+      } else {
+        // For COD, place order directly
+        const orderData = {
+          customer: {
+            fullName: formData.fullName,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            pincode: formData.pincode,
+          },
+          items: cart,
+          pricing: {
+            subtotal,
+            deliveryCharge,
+            total,
+          },
+          payment: {
+            method: 'cod',
+          },
+          notes: formData.notes,
+        }
+
+        // Place order via API
+        const response = await publicApi.createOrder(orderData)
+        console.log('Order placed:', response.data)
+        
+        // Store order number for success page
+        sessionStorage.setItem('lastOrderNumber', response.data.orderNumber)
+        
+        // Navigate to success page
+        navigate('/order-success')
+      }
+    } catch (error) {
+      console.error('Error placing order:', error)
+      alert('Failed to place order. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (cart.length === 0) {
+    return null // Will redirect
+  }
+
+  const subtotal = getCartTotal()
+  const deliveryCharge = subtotal >= 500 ? 0 : 50 // Free delivery above ₹500
+  const total = subtotal + deliveryCharge
+
+  return (
+    <div className="min-h-screen py-16 bg-gray-50">
+      <div className="container-custom">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/cart')}
+          className="flex items-center gap-2 text-deep-green hover:underline mb-6"
+        >
+          <ArrowLeft size={20} />
+          Back to Cart
+        </button>
+
+        <h1 className="text-3xl md:text-4xl font-bold text-deep-green mb-8">
+          Checkout
+        </h1>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Checkout Form */}
+          <div className="lg:col-span-2">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Customer Information */}
+              <div className="card p-6">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <User size={24} className="text-deep-green" />
+                  Customer Information
+                </h2>
+
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="fullName" className="block text-sm font-medium mb-1">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      id="fullName"
+                      name="fullName"
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      className={`input ${errors.fullName ? 'border-red-500' : ''}`}
+                      placeholder="Enter your full name"
+                    />
+                    {errors.fullName && (
+                      <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>
+                    )}
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium mb-1">
+                        Email *
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className={`input ${errors.email ? 'border-red-500' : ''}`}
+                        placeholder="your@email.com"
+                      />
+                      {errors.email && (
+                        <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label htmlFor="phone" className="block text-sm font-medium mb-1">
+                        Phone Number *
+                      </label>
+                      <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        className={`input ${errors.phone ? 'border-red-500' : ''}`}
+                        placeholder="10-digit mobile number"
+                      />
+                      {errors.phone && (
+                        <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Delivery Address */}
+              <div className="card p-6">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <MapPin size={24} className="text-deep-green" />
+                  Delivery Address
+                </h2>
+
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="address" className="block text-sm font-medium mb-1">
+                      Street Address *
+                    </label>
+                    <textarea
+                      id="address"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      rows={3}
+                      className={`input ${errors.address ? 'border-red-500' : ''}`}
+                      placeholder="House/Flat no., Building name, Street"
+                    />
+                    {errors.address && (
+                      <p className="text-red-500 text-sm mt-1">{errors.address}</p>
+                    )}
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <label htmlFor="city" className="block text-sm font-medium mb-1">
+                        City *
+                      </label>
+                      <input
+                        type="text"
+                        id="city"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        className={`input ${errors.city ? 'border-red-500' : ''}`}
+                        placeholder="City"
+                      />
+                      {errors.city && (
+                        <p className="text-red-500 text-sm mt-1">{errors.city}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label htmlFor="state" className="block text-sm font-medium mb-1">
+                        State *
+                      </label>
+                      <input
+                        type="text"
+                        id="state"
+                        name="state"
+                        value={formData.state}
+                        onChange={handleInputChange}
+                        className={`input ${errors.state ? 'border-red-500' : ''}`}
+                        placeholder="State"
+                      />
+                      {errors.state && (
+                        <p className="text-red-500 text-sm mt-1">{errors.state}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label htmlFor="pincode" className="block text-sm font-medium mb-1">
+                        Pincode *
+                      </label>
+                      <input
+                        type="text"
+                        id="pincode"
+                        name="pincode"
+                        value={formData.pincode}
+                        onChange={handleInputChange}
+                        className={`input ${errors.pincode ? 'border-red-500' : ''}`}
+                        placeholder="6-digit pincode"
+                      />
+                      {errors.pincode && (
+                        <p className="text-red-500 text-sm mt-1">{errors.pincode}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="card p-6">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <CreditCard size={24} className="text-deep-green" />
+                  Payment Method
+                </h2>
+
+                <div className="space-y-3">
+                  <label className="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cod"
+                      checked={formData.paymentMethod === 'cod'}
+                      onChange={handleInputChange}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <p className="font-semibold">Cash on Delivery</p>
+                      <p className="text-sm text-gray-600">Pay when you receive your order</p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="upi"
+                      checked={formData.paymentMethod === 'upi'}
+                      onChange={handleInputChange}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <p className="font-semibold">Pay with UPI</p>
+                      <p className="text-sm text-gray-600">PhonePe, Google Pay, Paytm, or any UPI app</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Order Notes (Optional) */}
+              <div className="card p-6">
+                <label htmlFor="notes" className="block text-sm font-medium mb-2">
+                  Order Notes (Optional)
+                </label>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleInputChange}
+                  rows={3}
+                  className="input"
+                  placeholder="Any special instructions for your order?"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full py-4 text-lg flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <LoadingSpinner size="small" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    {formData.paymentMethod === 'cod' ? 'Place Order' : 'Proceed to Payment'}
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* Order Summary */}
+          <div className="lg:col-span-1">
+            <div className="card p-6 lg:sticky lg:top-24 bg-white shadow-lg">
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 pb-4 border-b">
+                <ShoppingBag size={20} className="text-deep-green" />
+                Order Summary
+              </h2>
+
+              <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
+                {cart.map((item) => (
+                  <div key={item.id} className="flex gap-3 pb-4 border-b last:border-0">
+                    <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-2xl">
+                          🥣
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm line-clamp-2 mb-1">{item.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {CURRENCY_SYMBOL}{item.basePrice} × {item.quantity}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-bold text-deep-green">
+                        {CURRENCY_SYMBOL}{item.basePrice * item.quantity}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t pt-4 space-y-3 bg-gray-50 -mx-6 -mb-6 px-6 py-4 rounded-b-lg">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Subtotal ({getCartCount()} {getCartCount() === 1 ? 'item' : 'items'})</span>
+                  <span className="font-semibold">{CURRENCY_SYMBOL}{subtotal}</span>
+                </div>
+                
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Delivery Charge</span>
+                  <span className="font-semibold">
+                    {deliveryCharge === 0 ? (
+                      <span className="text-green-600 font-bold">FREE</span>
+                    ) : (
+                      `${CURRENCY_SYMBOL}${deliveryCharge}`
+                    )}
+                  </span>
+                </div>
+
+                {subtotal < 500 && (
+                  <div className="bg-amber-50 border-l-4 border-amber-500 p-3 rounded">
+                    <p className="text-xs text-amber-800">
+                      💡 Add <strong>{CURRENCY_SYMBOL}{500 - subtotal}</strong> more for FREE delivery!
+                    </p>
+                  </div>
+                )}
+
+                <div className="border-t border-gray-300 pt-4 mt-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-bold text-gray-900">Total</span>
+                    <span className="text-3xl font-bold text-deep-green">{CURRENCY_SYMBOL}{total}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default CheckoutPage

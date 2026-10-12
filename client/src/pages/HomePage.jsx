@@ -15,6 +15,7 @@ const HomePage = () => {
 
   useEffect(() => {
     document.title = `${DEFAULT_SETTINGS.brandName} - Fuel Your Day`
+    window.scrollTo(0, 0) // Scroll to top
     loadData()
   }, [])
 
@@ -53,7 +54,7 @@ const HomePage = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section - Enhanced */}
-      <section className="relative bg-gradient-to-br from-cream via-sage-green/10 to-warm-orange/10 py-20 md:py-28 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-cream via-sage-green/10 to-warm-orange/10 py-16 md:py-20 overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-sage-green/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-warm-orange/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
@@ -129,7 +130,7 @@ const HomePage = () => {
       </section>
 
       {/* Featured Products - Enhanced */}
-      <section className="py-20 bg-white">
+      <section className="py-16 bg-white">
         <div className="container-custom">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 bg-sage-green/10 px-4 py-2 rounded-full mb-4">
@@ -175,7 +176,7 @@ const HomePage = () => {
       </section>
 
       {/* How It Works - Enhanced */}
-      <section className="py-20 bg-gradient-to-br from-sage-green/5 to-warm-orange/5">
+      <section className="py-16 bg-gradient-to-br from-sage-green/5 to-warm-orange/5">
         <div className="container-custom">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-deep-green mb-4">
@@ -228,7 +229,7 @@ const HomePage = () => {
       </section>
 
       {/* Why Choose Us - Enhanced */}
-      <section className="py-20 bg-white">
+      <section className="py-16 bg-white">
         <div className="container-custom">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-deep-green mb-4">
@@ -286,7 +287,7 @@ const HomePage = () => {
 
       {/* Delivery CTA - Enhanced */}
       {settings.showDeliverySection && (
-        <section className="py-20 bg-gradient-to-br from-deep-green to-sage-green text-white relative overflow-hidden">
+        <section className="py-16 bg-gradient-to-br from-deep-green to-sage-green text-white relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
             <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>

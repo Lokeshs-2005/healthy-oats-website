@@ -8,7 +8,8 @@ import {
   Settings, 
   LogOut, 
   Menu, 
-  X 
+  X,
+  ShoppingBag
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -28,6 +29,7 @@ const AdminLayout = () => {
 
   const navItems = [
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
+    { to: '/admin/orders', icon: ShoppingBag, label: 'Orders' },
     { to: '/admin/products', icon: Package, label: 'Products' },
     { to: '/admin/categories', icon: FolderTree, label: 'Categories' },
     { to: '/admin/addons', icon: Plus, label: 'Add-ons' },

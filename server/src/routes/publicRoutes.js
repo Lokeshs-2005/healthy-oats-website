@@ -3,6 +3,7 @@ import { productService } from '../services/productService.js'
 import { categoryService } from '../services/categoryService.js'
 import { addonService } from '../services/addonService.js'
 import { settingsService } from '../services/settingsService.js'
+import { orderService } from '../services/orderService.js'
 
 const router = express.Router()
 
@@ -50,6 +51,26 @@ router.get('/site-settings', async (req, res, next) => {
   try {
     const settings = await settingsService.get()
     res.json(settings)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// Orders - Create new order
+router.post('/orders', async (req, res, next) => {
+  try {
+    const order = await orderService.create(req.body)
+    res.status(201).json(order)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// Orders - Get order by order number (for customer tracking)
+router.get('/orders/:orderNumber', async (req, res, next) => {
+  try {
+    const order = await orderService.getByOrderNumber(req.params.orderNumber)
+    res.json(order)
   } catch (error) {
     next(error)
   }

@@ -1,22 +1,26 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, MessageCircle, Package } from 'lucide-react'
+import { ArrowLeft, MessageCircle, Package, ShoppingCart, Plus, Minus } from 'lucide-react'
 import { publicApi } from '../services/api'
 import { CURRENCY_SYMBOL, DEFAULT_SETTINGS } from '../config/constants'
+import { useCart } from '../contexts/CartContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorMessage from '../components/ErrorMessage'
 
 const ProductDetailPage = () => {
   const { slug } = useParams()
   const navigate = useNavigate()
+  const { addToCart } = useCart()
   const [product, setProduct] = useState(null)
   const [addOns, setAddOns] = useState([])
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [quantity, setQuantity] = useState(1)
 
   useEffect(() => {
+    window.scrollTo(0, 0) // Scroll to top
     loadData()
   }, [slug])
 
@@ -50,6 +54,18 @@ const ProductDetailPage = () => {
     }
   }
 
+  const handleAddToCart = () => {
+    addToCart(product, quantity)
+  }
+
+  const handleBuyNow = () => {
+    addToCart(product, quantity)
+    navigate('/checkout')
+  }
+
+  const incrementQuantity = () => setQuantity(q => q + 1)
+  const decrementQuantity = () => setQuantity(q => Math.max(1, q - 1))
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -77,8 +93,14 @@ const ProductDetailPage = () => {
     addon => product.addOnIds?.includes(addon.id) && addon.isAvailable
   )
 
+  // Debug logging
+  console.log('Product:', product.name)
+  console.log('Product addOnIds:', product.addOnIds)
+  console.log('All addOns:', addOns)
+  console.log('Filtered productAddOns:', productAddOns)
+
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-16">
       <div className="container-custom">
         {/* Back Button */}
         <button
@@ -216,21 +238,80 @@ const ProductDetailPage = () => {
               </div>
             )}
 
-            {/* WhatsApp Enquiry Button */}
-            {settings.whatsappNumber && product.isAvailable && (
-              <button
-                onClick={handleWhatsAppEnquiry}
-                className="btn-primary w-full md:w-auto flex items-center justify-center gap-2"
-              >
-                <MessageCircle size={20} />
-                Enquire on WhatsApp
-              </button>
+            {/* Action Buttons */}
+            {product.isAvailable && (
+              <div className="space-y-4">
+                {/* Quantity Selector */}
+                <div className="flex items-center gap-4">
+                  <label className="font-semibold">Quantity:</label>
+                  <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-2">
+                    <button
+                      onClick={decrementQuantity}
+                      className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-white transition-colors"
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus size={20} />
+                    </button>
+                    
+                    <span className="w-12 text-center font-semibold text-lg">{quantity}</span>
+                    
+                    <button
+                      onClick={incrementQuantity}
+                      className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-white transition-colors"
+                      aria-label="Increase quantity"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col md:flex-row gap-3">
+                  <button
+                    onClick={handleBuyNow}
+                    className="btn-primary flex-1 flex items-center justify-center gap-2"
+                  >
+                    <ShoppingCart size={20} />
+                    Buy Now - {CURRENCY_SYMBOL}{product.basePrice * quantity}
+                  </button>
+
+                  <button
+                    onClick={handleAddToCart}
+                    className="btn-outline flex-1 flex items-center justify-center gap-2"
+                  >
+                    <Plus size={20} />
+                    Add to Cart
+                  </button>
+                </div>
+
+                {/* WhatsApp Enquiry Button */}
+                {settings.whatsappNumber && (
+                  <button
+                    onClick={handleWhatsAppEnquiry}
+                    className="btn-outline w-full md:w-auto flex items-center justify-center gap-2"
+                  >
+                    <MessageCircle size={20} />
+                    Enquire on WhatsApp
+                  </button>
+                )}
+              </div>
             )}
 
             {!product.isAvailable && (
-              <p className="text-gray-600 mt-4">
-                This item is currently unavailable. Please check back later.
-              </p>
+              <div className="space-y-4">
+                <p className="text-gray-600">
+                  This item is currently unavailable. Please check back later.
+                </p>
+                {settings.whatsappNumber && (
+                  <button
+                    onClick={handleWhatsAppEnquiry}
+                    className="btn-outline w-full md:w-auto flex items-center justify-center gap-2"
+                  >
+                    <MessageCircle size={20} />
+                    Get Notified on WhatsApp
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>

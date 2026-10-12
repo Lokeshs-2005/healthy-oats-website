@@ -9,6 +9,7 @@ const OurStoryPage = () => {
 
   useEffect(() => {
     document.title = 'Our Story - Healthy Oats'
+    window.scrollTo(0, 0) // Scroll to top
     loadSettings()
   }, [])
 
@@ -32,7 +33,7 @@ const OurStoryPage = () => {
   }
 
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-20">
       <div className="container-custom">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold text-deep-green mb-8 text-center">

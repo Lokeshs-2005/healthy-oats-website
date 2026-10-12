@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom'
 import { Menu, X, MessageCircle } from 'lucide-react'
 import { publicApi } from '../services/api'
 import { DEFAULT_SETTINGS } from '../config/constants'
+import CartIcon from './CartIcon'
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
@@ -63,6 +64,7 @@ const Navbar = () => {
                 {link.label}
               </NavLink>
             ))}
+            <CartIcon />
             {settings.whatsappNumber && (
               <button
                 onClick={handleWhatsAppClick}
@@ -75,13 +77,16 @@ const Navbar = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-deep-green"
-            aria-label="Toggle menu"
-          >
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          <div className="md:hidden flex items-center gap-2">
+            <CartIcon />
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-deep-green"
+              aria-label="Toggle menu"
+            >
+              {isOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}
