@@ -2,20 +2,39 @@ import nodemailer from 'nodemailer'
 
 // Email configuration
 const createTransporter = () => {
-  // Using Gmail SMTP
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER || 'healthyoatsgg@gmail.com',
-      pass: process.env.EMAIL_APP_PASSWORD // App-specific password
-    }
-  })
+  // Check if credentials are available
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
+    console.warn('⚠️  Email credentials not configured. Emails will not be sent.')
+    return null
+  }
+
+  try {
+    // Using Gmail SMTP
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_APP_PASSWORD
+      }
+    })
+
+    console.log('✓ Email transporter configured successfully')
+    return transporter
+  } catch (error) {
+    console.error('❌ Failed to create email transporter:', error)
+    return null
+  }
 }
 
 // Send order confirmation email to customer
 export const sendOrderConfirmationEmail = async (orderData) => {
   try {
     const transporter = createTransporter()
+    
+    if (!transporter) {
+      console.log('⚠️  Skipping customer email - transporter not available')
+      return { success: false, error: 'Email not configured' }
+    }
 
     const { customer, orderNumber, items, pricing, payment } = orderData
 
@@ -143,6 +162,11 @@ export const sendOrderConfirmationEmail = async (orderData) => {
 export const sendAdminOrderNotification = async (orderData) => {
   try {
     const transporter = createTransporter()
+    
+    if (!transporter) {
+      console.log('⚠️  Skipping admin email - transporter not available')
+      return { success: false, error: 'Email not configured' }
+    }
 
     const { customer, orderNumber, items, pricing, payment } = orderData
 
