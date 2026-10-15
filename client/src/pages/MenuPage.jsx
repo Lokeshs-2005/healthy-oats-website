@@ -198,7 +198,7 @@ const MenuPage = () => {
 
                 <div className="mt-8 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg max-w-3xl mx-auto">
                   <p className="text-sm text-amber-800">
-                    💡 <strong>How to use add-ons:</strong> These special extras can be added to compatible products. Click on any product above to see which add-ons are available, then customize your order on the product detail page.
+                    <strong>How to use add-ons:</strong> Open a product, tap the extras you want, then add it to cart. The price updates before you order.
                   </p>
                 </div>
               </div>

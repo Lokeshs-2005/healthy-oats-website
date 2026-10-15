@@ -5,10 +5,18 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: auto;
   }
 
   body {
-    @apply bg-cream text-dark-text;
+    @apply bg-cream text-dark-text overflow-y-auto overflow-x-hidden;
+    min-height: 100%;
+  }
+
+  #root {
+    min-height: 100%;
   }
 
   h1, h2, h3, h4, h5, h6 {

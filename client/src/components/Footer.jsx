@@ -23,7 +23,7 @@ const Footer = () => {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="bg-deep-green text-white mt-20">
+    <footer className="bg-deep-green text-white mt-8">
       <div className="container-custom py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand Section */}
@@ -56,6 +56,11 @@ const Footer = () => {
               <li>
                 <Link to="/contact" className="text-gray-300 hover:text-white transition-colors">
                   Contact
+                </Link>
+              </li>
+              <li>
+                <Link to="/cart" className="text-gray-300 hover:text-white transition-colors">
+                  Cart
                 </Link>
               </li>
             </ul>

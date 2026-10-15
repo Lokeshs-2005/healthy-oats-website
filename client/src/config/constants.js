@@ -20,8 +20,22 @@ export const DEFAULT_SETTINGS = {
   googleMapsUrl: '',
   swiggyUrl: '',
   zomatoUrl: '',
-  deliveryAnnouncementText: 'Online ordering is coming soon.',
+  deliveryAnnouncementText: 'Order from our menu for delivery in our service area.',
   showDeliverySection: true,
+  upiId: '8217563874-6@ybl',
+  upiPayeeName: 'Healthy Oats',
+  deliveryCharge: 50,
+  freeDeliveryThreshold: 500,
+}
+
+export const MAX_ITEM_QUANTITY = 20
+
+export const getDeliveryCharge = (subtotal, settings = DEFAULT_SETTINGS) => {
+  const threshold = Number(settings.freeDeliveryThreshold)
+  const fee = Number(settings.deliveryCharge)
+  const freeFrom = Number.isFinite(threshold) && threshold >= 0 ? threshold : 500
+  const charge = Number.isFinite(fee) && fee >= 0 ? fee : 50
+  return Number(subtotal) >= freeFrom ? 0 : charge
 }
 
 export const PRODUCT_CATEGORIES = {

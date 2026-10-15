@@ -449,8 +449,13 @@ const OrderDetailModal = ({
                   <div className="flex-1">
                     <div className="font-medium">{item.name}</div>
                     <div className="text-sm text-gray-600">
-                      {CURRENCY_SYMBOL}{item.basePrice} × {item.quantity}
+                      {CURRENCY_SYMBOL}{item.unitPrice || item.basePrice} × {item.quantity}
                     </div>
+                    {item.selectedAddOns?.length > 0 && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {item.selectedAddOns.map((addon) => addon.name).join(', ')}
+                      </div>
+                    )}
                   </div>
                   <div className="font-semibold">
                     {CURRENCY_SYMBOL}{item.subtotal}

@@ -18,6 +18,7 @@ const ProductDetailPage = () => {
   const [error, setError] = useState(null)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [quantity, setQuantity] = useState(1)
+  const [selectedAddOns, setSelectedAddOns] = useState([])
 
   useEffect(() => {
     window.scrollTo(0, 0) // Scroll to top
@@ -54,12 +55,27 @@ const ProductDetailPage = () => {
     }
   }
 
+  const toggleAddOn = (addon) => {
+    setSelectedAddOns((prev) => {
+      const exists = prev.some((item) => item.id === addon.id)
+      if (exists) {
+        return prev.filter((item) => item.id !== addon.id)
+      }
+      return [...prev, { id: addon.id, name: addon.name, additionalPrice: addon.additionalPrice || 0 }]
+    })
+  }
+
+  const unitPrice = (product?.basePrice || 0) + selectedAddOns.reduce(
+    (sum, addon) => sum + (Number(addon.additionalPrice) || 0),
+    0
+  )
+
   const handleAddToCart = () => {
-    addToCart(product, quantity)
+    addToCart(product, quantity, selectedAddOns)
   }
 
   const handleBuyNow = () => {
-    addToCart(product, quantity)
+    addToCart(product, quantity, selectedAddOns)
     navigate('/checkout')
   }
 
@@ -92,12 +108,6 @@ const ProductDetailPage = () => {
   const productAddOns = addOns.filter(
     addon => product.addOnIds?.includes(addon.id) && addon.isAvailable
   )
-
-  // Debug logging
-  console.log('Product:', product.name)
-  console.log('Product addOnIds:', product.addOnIds)
-  console.log('All addOns:', addOns)
-  console.log('Filtered productAddOns:', productAddOns)
 
   return (
     <div className="min-h-screen py-16">
@@ -160,7 +170,7 @@ const ProductDetailPage = () => {
             
             <div className="flex items-baseline gap-4 mb-6">
               <span className="text-4xl font-bold text-deep-green">
-                {CURRENCY_SYMBOL}{product.basePrice}
+                {CURRENCY_SYMBOL}{unitPrice}
               </span>
               {product.servingSize && (
                 <span className="text-gray-500">{product.servingSize}</span>
@@ -214,26 +224,34 @@ const ProductDetailPage = () => {
             {/* Available Add-ons */}
             {productAddOns.length > 0 && (
               <div className="mb-6">
-                <h3 className="font-semibold text-lg mb-3">Available Add-ons</h3>
+                <h3 className="font-semibold text-lg mb-1">Customize with add-ons</h3>
+                <p className="text-sm text-gray-500 mb-3">Tap to add extras to this bowl</p>
                 <div className="space-y-2">
-                  {productAddOns.map((addon) => (
-                    <div
-                      key={addon.id}
-                      className="flex justify-between items-center bg-gray-50 rounded-lg p-3"
-                    >
-                      <div>
-                        <p className="font-medium">{addon.name}</p>
-                        {addon.description && (
-                          <p className="text-sm text-gray-600">{addon.description}</p>
-                        )}
-                      </div>
-                      {addon.additionalPrice > 0 && (
-                        <span className="text-deep-green font-semibold">
-                          +{CURRENCY_SYMBOL}{addon.additionalPrice}
+                  {productAddOns.map((addon) => {
+                    const isSelected = selectedAddOns.some((item) => item.id === addon.id)
+                    return (
+                      <button
+                        key={addon.id}
+                        type="button"
+                        onClick={() => toggleAddOn(addon)}
+                        className={`w-full text-left flex justify-between items-center rounded-lg p-3 border-2 transition-colors ${
+                          isSelected
+                            ? 'border-deep-green bg-deep-green/5'
+                            : 'border-transparent bg-gray-50 hover:border-sage-green'
+                        }`}
+                      >
+                        <div>
+                          <p className="font-medium">{addon.name}</p>
+                          {addon.description && (
+                            <p className="text-sm text-gray-600">{addon.description}</p>
+                          )}
+                        </div>
+                        <span className="text-deep-green font-semibold ml-3">
+                          {addon.additionalPrice > 0 ? `+${CURRENCY_SYMBOL}${addon.additionalPrice}` : 'Free'}
                         </span>
-                      )}
-                    </div>
-                  ))}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -272,7 +290,7 @@ const ProductDetailPage = () => {
                     className="btn-primary flex-1 flex items-center justify-center gap-2"
                   >
                     <ShoppingCart size={20} />
-                    Buy Now - {CURRENCY_SYMBOL}{product.basePrice * quantity}
+                    Buy Now - {CURRENCY_SYMBOL}{unitPrice * quantity}
                   </button>
 
                   <button

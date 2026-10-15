@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Copy, CheckCircle, ExternalLink, Smartphone } from 'lucide-react'
-import { publicApi } from '../services/api'
-import { CURRENCY_SYMBOL } from '../config/constants'
+import { publicApi, getApiError } from '../services/api'
+import { CURRENCY_SYMBOL, DEFAULT_SETTINGS } from '../config/constants'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 const UpiPaymentPage = () => {
@@ -10,15 +10,18 @@ const UpiPaymentPage = () => {
   const [checkoutData, setCheckoutData] = useState(null)
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(false)
-
-  // UPI Details
-  const UPI_ID = '8217563874-6@ybl' // PhonePe UPI ID
-  const UPI_QR_URL = '/upi-qr-code.png' // QR code image in public folder
+  const [confirmError, setConfirmError] = useState('')
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [qrImageLoaded, setQrImageLoaded] = useState(false)
+  const UPI_QR_URL = '/upi-qr-code.png'
 
   useEffect(() => {
     document.title = 'UPI Payment - Healthy Oats'
-    window.scrollTo(0, 0) // Scroll to top
-    
+    window.scrollTo(0, 0)
+    publicApi.getSiteSettings()
+      .then((response) => setSettings({ ...DEFAULT_SETTINGS, ...response.data }))
+      .catch(() => {})
+
     // Load checkout data from sessionStorage
     const savedData = sessionStorage.getItem('checkoutData')
     if (!savedData) {
@@ -36,7 +39,7 @@ const UpiPaymentPage = () => {
   }, [navigate])
 
   const handleCopyUpiId = () => {
-    navigator.clipboard.writeText(UPI_ID)
+    navigator.clipboard.writeText(settings.upiId || DEFAULT_SETTINGS.upiId)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -46,11 +49,11 @@ const UpiPaymentPage = () => {
     
     // UPI deep link format
     const params = new URLSearchParams({
-      pa: UPI_ID, // Payee address (UPI ID)
-      pn: 'Healthy Oats', // Payee name
-      am: checkoutData.total.toString(), // Amount
-      cu: 'INR', // Currency
-      tn: `Order Payment - ${checkoutData.fullName}` // Transaction note
+      pa: settings.upiId || DEFAULT_SETTINGS.upiId,
+      pn: settings.upiPayeeName || settings.brandName || 'Healthy Oats',
+      am: checkoutData.total.toString(),
+      cu: 'INR',
+      tn: `Order Payment - ${checkoutData.fullName}`,
     })
 
     return `upi://pay?${params.toString()}`
@@ -64,6 +67,7 @@ const UpiPaymentPage = () => {
 
   const handleConfirmPayment = async () => {
     setLoading(true)
+    setConfirmError('')
 
     try {
       // Place order in database with "pending_verification" payment status
@@ -87,6 +91,7 @@ const UpiPaymentPage = () => {
           method: 'upi',
         },
         notes: checkoutData.notes || '',
+        idempotencyKey: sessionStorage.getItem('orderIdempotencyKey') || crypto.randomUUID(),
       }
 
       // Place order via API
@@ -95,15 +100,12 @@ const UpiPaymentPage = () => {
       
       // Store order number for success page
       sessionStorage.setItem('lastOrderNumber', response.data.orderNumber)
-      
-      // Clear checkout data
-      sessionStorage.removeItem('checkoutData')
-      
-      // Navigate to success page
+      sessionStorage.setItem('lastOrderEmail', checkoutData.email)
+      sessionStorage.setItem('lastOrderEmailSent', response.data.emailStatus?.customer ? 'true' : 'false')
       navigate('/order-success')
     } catch (error) {
       console.error('Error placing order:', error)
-      alert('Failed to place order. Please try again.')
+      setConfirmError(getApiError(error, 'Failed to place order. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -134,7 +136,7 @@ const UpiPaymentPage = () => {
         </h1>
 
         {/* Payment Amount Card */}
-        <div className="card mb-6 bg-gradient-to-br from-deep-green to-green-700 text-white">
+        <div className="card p-6 mb-6 bg-gradient-to-br from-deep-green to-green-700 text-white">
           <div className="text-center">
             <p className="text-sm opacity-90 mb-2">Amount to Pay</p>
             <p className="text-5xl font-bold">
@@ -144,7 +146,7 @@ const UpiPaymentPage = () => {
         </div>
 
         {/* Instructions */}
-        <div className="card mb-6">
+        <div className="card p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">How to Pay via UPI</h2>
           <ol className="space-y-3 text-gray-700">
             <li className="flex gap-3">
@@ -183,7 +185,7 @@ const UpiPaymentPage = () => {
         </div>
 
         {/* UPI QR Code */}
-        <div className="card mb-6">
+        <div className="card p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4 text-center">Scan QR Code</h2>
           <div className="flex flex-col items-center">
             <div className="w-64 h-64 bg-white border-2 border-gray-200 rounded-xl p-4 mb-4 flex items-center justify-center">
@@ -191,16 +193,22 @@ const UpiPaymentPage = () => {
                 src={UPI_QR_URL}
                 alt="UPI QR Code"
                 className="w-full h-full object-contain"
-                onError={(e) => {
-                  // Fallback if image not found
-                  e.target.style.display = 'none'
-                  e.target.parentElement.innerHTML = '<div class="text-center text-gray-500"><p class="text-4xl mb-2">📱</p><p>QR Code will appear here</p></div>'
-                }}
+                style={{ display: qrImageLoaded ? 'block' : 'none' }}
+                onLoad={() => setQrImageLoaded(true)}
+                onError={() => setQrImageLoaded(false)}
               />
+              {/* Fallback if QR image is missing */}
+              {!qrImageLoaded && (
+                <div className="text-center text-gray-500">
+                  <p className="text-5xl mb-3">📱</p>
+                  <p className="text-sm">Use "Pay Now" button below</p>
+                  <p className="text-xs mt-1">or copy UPI ID</p>
+                </div>
+              )}
             </div>
             
             <p className="text-sm text-gray-600 text-center mb-4">
-              Scan with PhonePe, Google Pay, Paytm or any UPI app
+              {qrImageLoaded ? 'Scan with PhonePe, Google Pay, Paytm or any UPI app' : 'Use the UPI ID below to complete payment'}
             </p>
 
             {/* UPI ID */}
@@ -208,7 +216,7 @@ const UpiPaymentPage = () => {
               <p className="text-sm text-gray-600 mb-2">Or pay directly to UPI ID:</p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 bg-white px-4 py-2 rounded border text-deep-green font-semibold">
-                  {UPI_ID}
+                  {settings.upiId || DEFAULT_SETTINGS.upiId}
                 </code>
                 <button
                   onClick={handleCopyUpiId}
@@ -245,6 +253,12 @@ const UpiPaymentPage = () => {
           </button>
 
           {/* Confirm Payment Button */}
+          {confirmError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">
+              {confirmError}
+            </div>
+          )}
+
           <button
             onClick={handleConfirmPayment}
             disabled={loading}
@@ -273,14 +287,14 @@ const UpiPaymentPage = () => {
           </p>
           <p className="text-sm text-gray-700 mt-2">
             <strong className="font-semibold text-yellow-800">Need Help?</strong> Contact us at{' '}
-            <a href="tel:+917026563874" className="text-deep-green font-semibold hover:underline">
-              +91 70265 63874
+            <a href={`tel:${(settings.businessPhone || DEFAULT_SETTINGS.businessPhone).replace(/\s/g, '')}`} className="text-deep-green font-semibold hover:underline">
+              {settings.businessPhone || DEFAULT_SETTINGS.businessPhone}
             </a>
           </p>
         </div>
 
         {/* Order Details Summary */}
-        <div className="mt-6 card">
+        <div className="mt-6 card p-6">
           <h3 className="font-semibold mb-3">Order Details</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">

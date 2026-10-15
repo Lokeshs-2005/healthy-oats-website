@@ -1,16 +1,27 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, User, Mail, Phone, MapPin, ShoppingBag, CreditCard } from 'lucide-react'
-import { useCart } from '../contexts/CartContext'
-import { publicApi } from '../services/api'
-import { CURRENCY_SYMBOL } from '../config/constants'
+import { ArrowLeft, User, MapPin, ShoppingBag, CreditCard } from 'lucide-react'
+import { useCart, getItemUnitPrice } from '../contexts/CartContext'
+import { publicApi, getApiError } from '../services/api'
+import { CURRENCY_SYMBOL, DEFAULT_SETTINGS, getDeliveryCharge } from '../config/constants'
 import LoadingSpinner from '../components/LoadingSpinner'
+
+const getIdempotencyKey = () => {
+  let key = sessionStorage.getItem('orderIdempotencyKey')
+  if (!key) {
+    key = crypto.randomUUID()
+    sessionStorage.setItem('orderIdempotencyKey', key)
+  }
+  return key
+}
 
 const CheckoutPage = () => {
   const navigate = useNavigate()
   const { cart, getCartTotal, getCartCount } = useCart()
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
+  const [submitError, setSubmitError] = useState('')
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -26,11 +37,13 @@ const CheckoutPage = () => {
 
   useEffect(() => {
     document.title = 'Checkout - Healthy Oats'
-    window.scrollTo(0, 0) // Scroll to top
-    
-    // Redirect if cart is empty
+    window.scrollTo(0, 0)
+    publicApi.getSiteSettings()
+      .then((response) => setSettings({ ...DEFAULT_SETTINGS, ...response.data }))
+      .catch(() => {})
+
     if (cart.length === 0) {
-      navigate('/menu')
+      navigate('/cart')
     }
   }, [cart, navigate])
 
@@ -82,7 +95,20 @@ const CheckoutPage = () => {
     }
 
     setErrors(newErrors)
+    if (Object.keys(newErrors).length > 0) {
+      const firstField = document.getElementById(Object.keys(newErrors)[0])
+      firstField?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      firstField?.focus()
+    }
     return Object.keys(newErrors).length === 0
+  }
+
+  const persistCheckoutData = (pricing) => {
+    sessionStorage.setItem('checkoutData', JSON.stringify({
+      ...formData,
+      cart,
+      ...pricing,
+    }))
   }
 
   const handleSubmit = async (e) => {
@@ -93,25 +119,19 @@ const CheckoutPage = () => {
     }
 
     setLoading(true)
+    setSubmitError('')
 
     try {
       const subtotal = getCartTotal()
-      const deliveryCharge = subtotal >= 500 ? 0 : 50
+      const deliveryCharge = getDeliveryCharge(subtotal, settings)
       const total = subtotal + deliveryCharge
+      const pricing = { subtotal, deliveryCharge, total }
+      persistCheckoutData(pricing)
 
-      // If UPI payment, navigate to UPI payment page
       if (formData.paymentMethod === 'upi') {
-        // Store customer details in sessionStorage for UPI page
-        sessionStorage.setItem('checkoutData', JSON.stringify({
-          ...formData,
-          cart,
-          subtotal,
-          deliveryCharge,
-          total
-        }))
+        getIdempotencyKey()
         navigate('/payment/upi')
       } else {
-        // For COD, place order directly
         const orderData = {
           customer: {
             fullName: formData.fullName,
@@ -123,30 +143,23 @@ const CheckoutPage = () => {
             pincode: formData.pincode,
           },
           items: cart,
-          pricing: {
-            subtotal,
-            deliveryCharge,
-            total,
-          },
+          pricing,
           payment: {
             method: 'cod',
           },
           notes: formData.notes,
+          idempotencyKey: getIdempotencyKey(),
         }
 
-        // Place order via API
         const response = await publicApi.createOrder(orderData)
-        console.log('Order placed:', response.data)
-        
-        // Store order number for success page
         sessionStorage.setItem('lastOrderNumber', response.data.orderNumber)
-        
-        // Navigate to success page
+        sessionStorage.setItem('lastOrderEmail', formData.email)
+        sessionStorage.setItem('lastOrderEmailSent', response.data.emailStatus?.customer ? 'true' : 'false')
         navigate('/order-success')
       }
     } catch (error) {
       console.error('Error placing order:', error)
-      alert('Failed to place order. Please try again.')
+      setSubmitError(getApiError(error, 'Failed to place order. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -157,8 +170,9 @@ const CheckoutPage = () => {
   }
 
   const subtotal = getCartTotal()
-  const deliveryCharge = subtotal >= 500 ? 0 : 50 // Free delivery above ₹500
+  const deliveryCharge = getDeliveryCharge(subtotal, settings)
   const total = subtotal + deliveryCharge
+  const freeFrom = Number(settings.freeDeliveryThreshold) || 500
 
   return (
     <div className="min-h-screen py-16 bg-gray-50">
@@ -172,9 +186,16 @@ const CheckoutPage = () => {
           Back to Cart
         </button>
 
-        <h1 className="text-3xl md:text-4xl font-bold text-deep-green mb-8">
+        <h1 className="text-3xl md:text-4xl font-bold text-deep-green mb-4">
           Checkout
         </h1>
+        <div className="flex items-center gap-2 text-sm text-gray-600 mb-8">
+          <span className="text-sage-green font-medium">Cart</span>
+          <span>/</span>
+          <span className="text-deep-green font-semibold">Checkout</span>
+          <span>/</span>
+          <span>Confirmation</span>
+        </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Checkout Form */}
@@ -338,7 +359,7 @@ const CheckoutPage = () => {
                 </h2>
 
                 <div className="space-y-3">
-                  <label className="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                  <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${formData.paymentMethod === 'cod' ? 'border-deep-green bg-deep-green/5' : 'border-gray-200'}`}>
                     <input
                       type="radio"
                       name="paymentMethod"
@@ -353,7 +374,7 @@ const CheckoutPage = () => {
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                  <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${formData.paymentMethod === 'upi' ? 'border-deep-green bg-deep-green/5' : 'border-gray-200'}`}>
                     <input
                       type="radio"
                       name="paymentMethod"
@@ -386,7 +407,12 @@ const CheckoutPage = () => {
                 />
               </div>
 
-              {/* Submit Button */}
+              {submitError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">
+                  {submitError}
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={loading}
@@ -416,7 +442,7 @@ const CheckoutPage = () => {
 
               <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
                 {cart.map((item) => (
-                  <div key={item.id} className="flex gap-3 pb-4 border-b last:border-0">
+                  <div key={item.cartItemId || item.id} className="flex gap-3 pb-4 border-b last:border-0">
                     <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
                       {item.imageUrl ? (
                         <img
@@ -433,12 +459,17 @@ const CheckoutPage = () => {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm line-clamp-2 mb-1">{item.name}</p>
                       <p className="text-xs text-gray-500">
-                        {CURRENCY_SYMBOL}{item.basePrice} × {item.quantity}
+                        {CURRENCY_SYMBOL}{getItemUnitPrice(item)} × {item.quantity}
                       </p>
+                      {item.selectedAddOns?.length > 0 && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          {item.selectedAddOns.map((addon) => addon.name).join(', ')}
+                        </p>
+                      )}
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="font-bold text-deep-green">
-                        {CURRENCY_SYMBOL}{item.basePrice * item.quantity}
+                        {CURRENCY_SYMBOL}{getItemUnitPrice(item) * item.quantity}
                       </p>
                     </div>
                   </div>
@@ -462,10 +493,10 @@ const CheckoutPage = () => {
                   </span>
                 </div>
 
-                {subtotal < 500 && (
+                {subtotal < freeFrom && deliveryCharge > 0 && (
                   <div className="bg-amber-50 border-l-4 border-amber-500 p-3 rounded">
                     <p className="text-xs text-amber-800">
-                      💡 Add <strong>{CURRENCY_SYMBOL}{500 - subtotal}</strong> more for FREE delivery!
+                      Add <strong>{CURRENCY_SYMBOL}{freeFrom - subtotal}</strong> more for free delivery.
                     </p>
                   </div>
                 )}

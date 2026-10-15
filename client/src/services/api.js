@@ -28,8 +28,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.data?.error) {
+      error.message = error.response.data.error
+    }
     if (error.response?.status === 401) {
-      // Handle unauthorized access
       console.error('Unauthorized access')
     }
     return Promise.reject(error)
@@ -89,6 +91,10 @@ export const adminApi = {
   updateOrderStatus: (id, status) => api.patch(`/api/admin/orders/${id}/status`, { status }),
   updatePaymentStatus: (id, paymentStatus) => api.patch(`/api/admin/orders/${id}/payment-status`, { paymentStatus }),
   getOrderStatistics: () => api.get('/api/admin/orders-statistics'),
+}
+
+export const getApiError = (error, fallback = 'Something went wrong. Please try again.') => {
+  return error.response?.data?.error || error.message || fallback
 }
 
 export default api

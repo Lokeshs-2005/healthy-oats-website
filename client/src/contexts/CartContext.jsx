@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { MAX_ITEM_QUANTITY } from '../config/constants'
 
 const CartContext = createContext()
 
@@ -10,99 +11,142 @@ export const useCart = () => {
   return context
 }
 
+export const getItemUnitPrice = (item) => {
+  const addonTotal = (item.selectedAddOns || []).reduce(
+    (sum, addon) => sum + (Number(addon.additionalPrice) || 0),
+    0
+  )
+  return (Number(item.basePrice) || 0) + addonTotal
+}
+
+export const getCartItemId = (productId, selectedAddOns = []) => {
+  const addonKey = [...selectedAddOns]
+    .map((addon) => addon.id)
+    .filter(Boolean)
+    .sort()
+    .join(',')
+  return addonKey ? `${productId}::${addonKey}` : String(productId)
+}
+
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState([])
-  const [isOpen, setIsOpen] = useState(false)
-
-  // Load cart from localStorage on mount
-  useEffect(() => {
-    const savedCart = localStorage.getItem('healthyOatsCart')
-    if (savedCart) {
-      try {
-        setCart(JSON.parse(savedCart))
-      } catch (error) {
-        console.error('Error loading cart:', error)
-      }
+  const [cart, setCart] = useState(() => {
+    try {
+      const savedCart = localStorage.getItem('healthyOatsCart')
+      return savedCart ? JSON.parse(savedCart) : []
+    } catch (error) {
+      console.error('Error loading cart:', error)
+      return []
     }
-  }, [])
+  })
+  const [toast, setToast] = useState(null)
+  const toastTimer = useRef(null)
 
-  // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('healthyOatsCart', JSON.stringify(cart))
   }, [cart])
 
-  // Add item to cart
-  const addToCart = (product, quantity = 1) => {
-    setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === product.id)
-      
+  const showToast = useCallback((message) => {
+    setToast(message)
+    if (toastTimer.current) {
+      clearTimeout(toastTimer.current)
+    }
+    toastTimer.current = setTimeout(() => setToast(null), 2800)
+  }, [])
+
+  const addToCart = useCallback((product, quantity = 1, selectedAddOns = []) => {
+    const cartItemId = getCartItemId(product.id, selectedAddOns)
+    const safeQuantity = Math.min(Math.max(Number(quantity) || 1, 1), MAX_ITEM_QUANTITY)
+
+    setCart((prevCart) => {
+      const existingItem = prevCart.find((item) => (item.cartItemId || item.id) === cartItemId)
+
       if (existingItem) {
-        // Update quantity if item already exists
-        return prevCart.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+        return prevCart.map((item) =>
+          (item.cartItemId || item.id) === cartItemId
+            ? { ...item, quantity: Math.min(item.quantity + safeQuantity, MAX_ITEM_QUANTITY) }
             : item
         )
-      } else {
-        // Add new item
-        return [...prevCart, { ...product, quantity }]
       }
+
+      return [
+        ...prevCart,
+        {
+          cartItemId,
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          imageUrl: product.imageUrl,
+          shortDescription: product.shortDescription,
+          basePrice: product.basePrice,
+          quantity: safeQuantity,
+          selectedAddOns,
+        },
+      ]
     })
-    setIsOpen(true) // Open cart sidebar
-  }
 
-  // Remove item from cart
-  const removeFromCart = (productId) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== productId))
-  }
+    showToast(`${product.name} added to cart`)
+  }, [showToast])
 
-  // Update item quantity
-  const updateQuantity = (productId, quantity) => {
+  const removeFromCart = useCallback((itemId) => {
+    setCart((prevCart) => prevCart.filter((item) => (item.cartItemId || item.id) !== itemId))
+  }, [])
+
+  const updateQuantity = useCallback((itemId, quantity) => {
     if (quantity < 1) {
-      removeFromCart(productId)
+      setCart((prevCart) => prevCart.filter((item) => (item.cartItemId || item.id) !== itemId))
       return
     }
-    
-    setCart(prevCart =>
-      prevCart.map(item =>
-        item.id === productId
-          ? { ...item, quantity }
+
+    setCart((prevCart) =>
+      prevCart.map((item) =>
+        (item.cartItemId || item.id) === itemId
+          ? { ...item, quantity: Math.min(quantity, MAX_ITEM_QUANTITY) }
           : item
       )
     )
-  }
+  }, [])
 
-  // Clear entire cart
-  const clearCart = () => {
-    setCart([])
+  const clearCart = useCallback(() => {
+    setCart((prevCart) => (prevCart.length === 0 ? prevCart : []))
     localStorage.removeItem('healthyOatsCart')
-  }
+  }, [])
 
-  // Calculate totals
-  const getCartTotal = () => {
-    return cart.reduce((total, item) => total + (item.basePrice * item.quantity), 0)
-  }
+  const getCartTotal = useCallback(() => {
+    return cart.reduce((total, item) => total + getItemUnitPrice(item) * item.quantity, 0)
+  }, [cart])
 
-  const getCartCount = () => {
+  const getCartCount = useCallback(() => {
     return cart.reduce((count, item) => count + item.quantity, 0)
-  }
+  }, [cart])
 
-  const getItemCount = () => {
-    return cart.length
-  }
+  const getItemCount = useCallback(() => cart.length, [cart])
 
-  const value = {
-    cart,
-    addToCart,
-    removeFromCart,
-    updateQuantity,
-    clearCart,
-    getCartTotal,
-    getCartCount,
-    getItemCount,
-    isOpen,
-    setIsOpen,
-  }
+  const value = useMemo(
+    () => ({
+      cart,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      getCartTotal,
+      getCartCount,
+      getItemCount,
+      toast,
+      showToast,
+    }),
+    [
+      cart,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      getCartTotal,
+      getCartCount,
+      getItemCount,
+      toast,
+      showToast,
+    ]
+  )
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }

@@ -1,7 +1,84 @@
 import { db, isInitialized } from '../config/firebase.js'
 import { AppError } from '../middleware/errorHandler.js'
+import { trimString } from '../utils/sanitize.js'
 
 const COLLECTION = 'products'
+
+const slugify = (value) =>
+  String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+
+const sanitizeProduct = (data = {}, { isUpdate = false } = {}) => {
+  const name = trimString(data.name, 120)
+  const slug = slugify(data.slug || data.name)
+  const shortDescription = trimString(data.shortDescription, 240)
+  const description = trimString(data.description, 4000)
+  const basePrice = Number(data.basePrice)
+
+  if (!isUpdate || data.name !== undefined) {
+    if (name.length < 2) throw new AppError('Product name is required', 400)
+  }
+  if (!isUpdate || data.slug !== undefined || data.name !== undefined) {
+    if (!slug) throw new AppError('Product slug is required', 400)
+  }
+  if (!isUpdate || data.shortDescription !== undefined) {
+    if (!shortDescription) throw new AppError('Short description is required', 400)
+  }
+  if (!isUpdate || data.description !== undefined) {
+    if (!description) throw new AppError('Description is required', 400)
+  }
+  if (!isUpdate || data.basePrice !== undefined) {
+    if (!Number.isFinite(basePrice) || basePrice < 0) {
+      throw new AppError('A valid price is required', 400)
+    }
+  }
+
+  const product = {
+    name,
+    slug,
+    shortDescription,
+    description,
+    categoryId: trimString(data.categoryId, 80),
+    basePrice,
+    servingSize: trimString(data.servingSize, 40),
+    ingredients: trimString(data.ingredients, 2000),
+    allergens: trimString(data.allergens, 500),
+    storageInstructions: trimString(data.storageInstructions, 500),
+    imageUrl: trimString(data.imageUrl, 500),
+    additionalImages: Array.isArray(data.additionalImages)
+      ? data.additionalImages.map((url) => trimString(url, 500)).filter(Boolean).slice(0, 8)
+      : [],
+    addOnIds: Array.isArray(data.addOnIds) ? data.addOnIds.map(String).slice(0, 50) : [],
+    isFeatured: Boolean(data.isFeatured),
+    isAvailable: data.isAvailable !== false,
+    nutritionalInfo: trimString(data.nutritionalInfo, 2000),
+    labels: trimString(data.labels, 200),
+  }
+
+  if (isUpdate) {
+    const allowed = {}
+    const keys = Object.keys(product)
+    keys.forEach((key) => {
+      if (data[key] !== undefined || ['slug', 'name', 'basePrice', 'shortDescription', 'description'].includes(key) && data[key] !== undefined) {
+        if (data[key] !== undefined || (key === 'slug' && (data.slug !== undefined || data.name !== undefined))) {
+          allowed[key] = product[key]
+        }
+      }
+    })
+    ;['isFeatured', 'isAvailable', 'additionalImages', 'addOnIds'].forEach((key) => {
+      if (data[key] !== undefined) allowed[key] = product[key]
+    })
+    Object.keys(product).forEach((key) => {
+      if (data[key] !== undefined) allowed[key] = product[key]
+    })
+    return allowed
+  }
+
+  return product
+}
 
 export const productService = {
   async getAll(filters = {}) {
@@ -10,50 +87,36 @@ export const productService = {
     }
 
     try {
-      // For simple queries without indexes, fetch all and filter in memory
-      let query = db.collection(COLLECTION)
-
-      // Only use single field queries to avoid index requirements
-      if (filters.categoryId && !filters.featured && !filters.available) {
-        query = query.where('categoryId', '==', filters.categoryId)
-      }
-
-      const snapshot = await query.get()
+      const snapshot = await db.collection(COLLECTION).get()
       let products = []
 
       snapshot.forEach((doc) => {
         products.push({ id: doc.id, ...doc.data() })
       })
 
-      // Filter in memory to avoid composite indexes
       if (filters.categoryId) {
-        products = products.filter(p => p.categoryId === filters.categoryId)
+        products = products.filter((p) => p.categoryId === filters.categoryId)
       }
 
       if (filters.featured !== undefined) {
         const isFeatured = filters.featured === 'true' || filters.featured === true
-        products = products.filter(p => p.isFeatured === isFeatured)
+        products = products.filter((p) => p.isFeatured === isFeatured)
       }
 
       if (filters.available !== undefined) {
         const isAvailable = filters.available === 'true' || filters.available === true
-        products = products.filter(p => p.isAvailable === isAvailable)
+        products = products.filter((p) => p.isAvailable === isAvailable)
       }
 
-      // Sort by createdAt descending (newest first)
-      products.sort((a, b) => {
-        const dateA = new Date(a.createdAt || 0)
-        const dateB = new Date(b.createdAt || 0)
-        return dateB - dateA
-      })
+      products.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
 
-      // Apply limit after filtering
       if (filters.limit) {
-        return products.slice(0, parseInt(filters.limit))
+        return products.slice(0, parseInt(filters.limit, 10))
       }
 
       return products
     } catch (error) {
+      if (error instanceof AppError) throw error
       console.error('Error fetching products:', error)
       throw new AppError('Failed to fetch products', 500)
     }
@@ -64,10 +127,7 @@ export const productService = {
       throw new AppError('Database service unavailable. Please check server configuration.', 503)
     }
 
-    const snapshot = await db.collection(COLLECTION)
-      .where('slug', '==', slug)
-      .limit(1)
-      .get()
+    const snapshot = await db.collection(COLLECTION).where('slug', '==', slug).limit(1).get()
 
     if (snapshot.empty) {
       throw new AppError('Product not found', 404)
@@ -82,14 +142,20 @@ export const productService = {
       throw new AppError('Database service unavailable. Please check server configuration.', 503)
     }
 
-    const productData = {
-      ...data,
+    const productData = sanitizeProduct(data)
+    const existing = await db.collection(COLLECTION).where('slug', '==', productData.slug).limit(1).get()
+    if (!existing.empty) {
+      throw new AppError('A product with this slug already exists', 400)
+    }
+
+    const payload = {
+      ...productData,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
 
-    const docRef = await db.collection(COLLECTION).add(productData)
-    return { id: docRef.id, ...productData }
+    const docRef = await db.collection(COLLECTION).add(payload)
+    return { id: docRef.id, ...payload }
   },
 
   async update(id, data) {
@@ -97,24 +163,64 @@ export const productService = {
       throw new AppError('Database service unavailable. Please check server configuration.', 503)
     }
 
-    const updateData = {
-      ...data,
-      updatedAt: new Date().toISOString(),
-    }
-
-    await db.collection(COLLECTION).doc(id).update(updateData)
-    const doc = await db.collection(COLLECTION).doc(id).get()
-
-    if (!doc.exists) {
+    const docRef = db.collection(COLLECTION).doc(id)
+    const existingDoc = await docRef.get()
+    if (!existingDoc.exists) {
       throw new AppError('Product not found', 404)
     }
 
+    const updateData = {
+      ...sanitizeProduct({ ...existingDoc.data(), ...data }),
+      updatedAt: new Date().toISOString(),
+    }
+    delete updateData.createdAt
+
+    if (updateData.slug) {
+      const slugClash = await db.collection(COLLECTION).where('slug', '==', updateData.slug).limit(1).get()
+      if (!slugClash.empty && slugClash.docs[0].id !== id) {
+        throw new AppError('A product with this slug already exists', 400)
+      }
+    }
+
+    await docRef.update(updateData)
+    const doc = await docRef.get()
     return { id: doc.id, ...doc.data() }
   },
 
   async delete(id) {
     if (!isInitialized || !db) {
       throw new AppError('Database service unavailable. Please check server configuration.', 503)
+    }
+
+    const doc = await db.collection(COLLECTION).doc(id).get()
+    if (!doc.exists) {
+      throw new AppError('Product not found', 404)
+    }
+
+    // Check if product is in pending orders (not delivered or cancelled)
+    const ordersSnapshot = await db.collection('orders').get()
+    const pendingOrders = []
+    
+    ordersSnapshot.docs.forEach((orderDoc) => {
+      const order = orderDoc.data()
+      // Skip delivered and cancelled orders
+      if (order.status === 'delivered' || order.status === 'cancelled') {
+        return
+      }
+      // Check if this product is in the order items
+      if (Array.isArray(order.items)) {
+        const hasProduct = order.items.some(item => item.productId === id)
+        if (hasProduct) {
+          pendingOrders.push(order.orderNumber || orderDoc.id)
+        }
+      }
+    })
+
+    if (pendingOrders.length > 0) {
+      throw new AppError(
+        `Cannot delete product. It is in ${pendingOrders.length} pending order(s). Mark as unavailable instead or wait until orders are completed.`,
+        400
+      )
     }
 
     await db.collection(COLLECTION).doc(id).delete()

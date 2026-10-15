@@ -12,6 +12,7 @@ const HomePage = () => {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [heroImageLoaded, setHeroImageLoaded] = useState(false)
 
   useEffect(() => {
     document.title = `${DEFAULT_SETTINGS.brandName} - Fuel Your Day`
@@ -64,7 +65,7 @@ const HomePage = () => {
             <div className="space-y-6 animate-fade-in">
               <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm">
                 <Sparkles className="w-4 h-4 text-warm-orange" />
-                <span className="text-sm font-medium text-deep-green">Healthy & Delicious</span>
+                <span className="text-sm font-medium text-deep-green">Oatmeal cups & toppings</span>
               </div>
               
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-deep-green leading-tight">
@@ -119,7 +120,19 @@ const HomePage = () => {
                     alt="Delicious healthy oatmeal cups and bowls"
                     className="w-full h-full object-cover"
                     loading="eager"
+                    onLoad={() => setHeroImageLoaded(true)}
+                    onError={(e) => {
+                      e.target.style.display = 'none'
+                      setHeroImageLoaded(false)
+                    }}
+                    style={{ display: heroImageLoaded ? 'block' : 'none' }}
                   />
+                  {/* Fallback if image fails to load */}
+                  {!heroImageLoaded && (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-sage-green/30 to-warm-orange/30">
+                      <span className="text-9xl">🥣</span>
+                    </div>
+                  )}
                   {/* Overlay gradient */}
                   <div className="absolute inset-0 bg-gradient-to-t from-deep-green/20 via-transparent to-transparent"></div>
                 </div>
@@ -327,8 +340,17 @@ const HomePage = () => {
                 )}
               </div>
             ) : (
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 max-w-xl mx-auto">
-                <p className="text-xl">{settings.deliveryAnnouncementText}</p>
+              <div className="max-w-xl mx-auto">
+                <p className="text-xl mb-6 opacity-90">
+                  Order directly from our menu. Fresh bowls, made to order.
+                </p>
+                <Link
+                  to="/menu"
+                  className="bg-white text-deep-green px-8 py-4 rounded-full font-semibold hover:bg-cream transition-colors inline-flex items-center justify-center gap-2 shadow-xl"
+                >
+                  Order from our menu
+                  <ArrowRight size={20} />
+                </Link>
               </div>
             )}
           </div>

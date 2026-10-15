@@ -1,20 +1,24 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, X, ShoppingBag, ArrowRight } from 'lucide-react'
-import { useCart } from '../contexts/CartContext'
+import { useCart, getItemUnitPrice } from '../contexts/CartContext'
 import { publicApi } from '../services/api'
-import { CURRENCY_SYMBOL } from '../config/constants'
+import { CURRENCY_SYMBOL, DEFAULT_SETTINGS, getDeliveryCharge, MAX_ITEM_QUANTITY } from '../config/constants'
 import EmptyState from '../components/EmptyState'
 
 const CartPage = () => {
   const navigate = useNavigate()
   const { cart, updateQuantity, removeFromCart, getCartTotal, getCartCount } = useCart()
   const [addOns, setAddOns] = useState([])
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
 
   // Scroll to top when component mounts
   useEffect(() => {
     window.scrollTo(0, 0)
     loadAddOns()
+    publicApi.getSiteSettings()
+      .then((response) => setSettings({ ...DEFAULT_SETTINGS, ...response.data }))
+      .catch(() => {})
   }, [])
 
   const loadAddOns = async () => {
@@ -27,8 +31,9 @@ const CartPage = () => {
   }
 
   const subtotal = getCartTotal()
-  const deliveryCharge = subtotal >= 500 ? 0 : 50 // Free delivery above ₹500
+  const deliveryCharge = getDeliveryCharge(subtotal, settings)
   const total = subtotal + deliveryCharge
+  const freeFrom = Number(settings.freeDeliveryThreshold) || 500
 
   const handleCheckout = () => {
     navigate('/checkout')
@@ -68,7 +73,7 @@ const CartPage = () => {
           <div className="lg:col-span-2 space-y-4">
             {cart.map((item) => (
               <CartItem
-                key={item.id}
+                key={item.cartItemId || item.id}
                 item={item}
                 onUpdateQuantity={updateQuantity}
                 onRemove={removeFromCart}
@@ -117,7 +122,7 @@ const CartPage = () => {
                 </div>
                 <div className="mt-4 bg-amber-50 border-l-4 border-amber-500 p-3 rounded">
                   <p className="text-xs text-amber-800">
-                    💡 <strong>How add-ons work:</strong> These are special extras available with certain products. Visit the menu to find products that offer these add-ons, then customize your selection on the product detail page before adding to cart.
+                    <strong>Tip:</strong> Open a product from the menu and tap extras there. They will show up on that item in your cart.
                   </p>
                 </div>
               </div>
@@ -172,7 +177,7 @@ const CartPage = () => {
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="flex items-start gap-3 text-sm text-gray-600">
                   <span className="text-green-600 mt-0.5">✓</span>
-                  <p>Free delivery on orders above ₹500</p>
+                  <p>Free delivery on orders above {CURRENCY_SYMBOL}{freeFrom}</p>
                 </div>
                 <div className="flex items-start gap-3 text-sm text-gray-600 mt-2">
                   <span className="text-green-600 mt-0.5">✓</span>
@@ -182,32 +187,47 @@ const CartPage = () => {
             </div>
           </div>
         </div>
+
+        <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t bg-white p-4 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-gray-500">Total</p>
+              <p className="text-lg font-bold text-deep-green">{CURRENCY_SYMBOL}{total}</p>
+            </div>
+            <button onClick={handleCheckout} className="btn-primary flex-1 max-w-[60%]">
+              Checkout
+            </button>
+          </div>
+        </div>
+        <div className="h-24 lg:hidden" />
       </div>
     </div>
   )
 }
 
 const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
+  const itemId = item.cartItemId || item.id
+  const unitPrice = getItemUnitPrice(item)
+  const itemTotal = unitPrice * item.quantity
+
   const handleIncrease = () => {
-    onUpdateQuantity(item.id, item.quantity + 1)
+    onUpdateQuantity(itemId, item.quantity + 1)
   }
 
   const handleDecrease = () => {
     if (item.quantity > 1) {
-      onUpdateQuantity(item.id, item.quantity - 1)
+      onUpdateQuantity(itemId, item.quantity - 1)
     } else {
-      onRemove(item.id)
+      onRemove(itemId)
     }
   }
-
-  const itemTotal = item.basePrice * item.quantity
 
   return (
     <div className="card p-4 flex gap-4 relative group">
       {/* Remove button */}
       <button
-        onClick={() => onRemove(item.id)}
-        className="absolute top-2 right-2 p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors opacity-0 group-hover:opacity-100"
+        onClick={() => onRemove(item.cartItemId || item.id)}
+        className="absolute top-2 right-2 p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
         aria-label="Remove item"
       >
         <X size={16} />
@@ -242,6 +262,11 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
             {item.shortDescription}
           </p>
         )}
+        {item.selectedAddOns?.length > 0 && (
+          <p className="text-xs text-sage-green mt-1">
+            Add-ons: {item.selectedAddOns.map((addon) => addon.name).join(', ')}
+          </p>
+        )}
 
         <div className="flex items-center justify-between mt-4">
           {/* Quantity Controls */}
@@ -258,7 +283,8 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
             
             <button
               onClick={handleIncrease}
-              className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-white transition-colors"
+              disabled={item.quantity >= MAX_ITEM_QUANTITY}
+              className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-white transition-colors disabled:opacity-40"
               aria-label="Increase quantity"
             >
               <Plus size={16} />
@@ -268,7 +294,7 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
           {/* Price */}
           <div className="text-right">
             <p className="text-sm text-gray-500">
-              {CURRENCY_SYMBOL}{item.basePrice} × {item.quantity}
+              {CURRENCY_SYMBOL}{unitPrice} × {item.quantity}
             </p>
             <p className="text-lg font-bold text-deep-green">
               {CURRENCY_SYMBOL}{itemTotal}

@@ -83,6 +83,8 @@ const Navbar = () => {
               onClick={() => setIsOpen(!isOpen)}
               className="p-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-deep-green"
               aria-label="Toggle menu"
+              aria-expanded={isOpen}
+              aria-controls="mobile-menu"
             >
               {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -91,7 +93,7 @@ const Navbar = () => {
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <div className="md:hidden py-4 border-t">
+          <div id="mobile-menu" className="md:hidden py-4 border-t">
             <div className="flex flex-col space-y-4">
               {navLinks.map((link) => (
                 <NavLink
