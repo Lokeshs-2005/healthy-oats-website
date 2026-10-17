@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, MapPin, Sparkles, Heart, Clock, Award, Leaf, CheckCircle } from 'lucide-react'
+import { ArrowRight, MapPin, Sparkles, Heart, Clock, Leaf, CheckCircle } from 'lucide-react'
 import { publicApi } from '../services/api'
 import { DEFAULT_SETTINGS, CURRENCY_SYMBOL } from '../config/constants'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -233,63 +233,6 @@ const HomePage = () => {
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
                 <p className="text-gray-500 text-sm">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Why Choose Us - Enhanced */}
-      <section className="py-16 bg-white">
-        <div className="container-custom">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-deep-green mb-4">
-              Why Choose Healthy Oats?
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              We're committed to quality, freshness, and your satisfaction
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { 
-                icon: <Award className="w-8 h-8" />, 
-                bgColor: 'from-blue-500/10 to-blue-600/10',
-                iconColor: 'text-blue-600',
-                title: 'Premium Quality', 
-                desc: 'Only the finest organic oats and ingredients' 
-              },
-              { 
-                icon: <Heart className="w-8 h-8" />, 
-                bgColor: 'from-red-500/10 to-pink-600/10',
-                iconColor: 'text-red-600',
-                title: 'Made with Love', 
-                desc: 'Fresh, handcrafted combinations daily' 
-              },
-              { 
-                icon: <Clock className="w-8 h-8" />, 
-                bgColor: 'from-orange-500/10 to-amber-600/10',
-                iconColor: 'text-orange-600',
-                title: 'Quick Service', 
-                desc: 'Perfect for your busy morning routine' 
-              },
-              { 
-                icon: <Sparkles className="w-8 h-8" />, 
-                bgColor: 'from-purple-500/10 to-pink-600/10',
-                iconColor: 'text-purple-600',
-                title: 'Fully Custom', 
-                desc: 'Create your perfect combination every time' 
-              },
-            ].map((item, index) => (
-              <div key={index} className="group">
-                <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 h-full border border-gray-100 hover:border-sage-green/30">
-                  <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${item.bgColor} ${item.iconColor} mb-4 group-hover:scale-110 transition-transform`}>
-                    {item.icon}
-                  </div>
-                  <h3 className="text-xl font-semibold text-deep-green mb-2">{item.title}</h3>
-                  <p className="text-gray-600 leading-relaxed">{item.desc}</p>
-                </div>
               </div>
             ))}
           </div>
