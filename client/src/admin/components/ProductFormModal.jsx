@@ -12,10 +12,12 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
     imageUrl: '',
     additionalImages: [],
     pricingTiers: [],
+    displayOrder: 999,
     isAvailable: true,
   })
   
   const [uploading, setUploading] = useState(false)
+  const [uploadingAdditional, setUploadingAdditional] = useState({})
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -27,6 +29,7 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
         imageUrl: product.imageUrl || '',
         additionalImages: product.additionalImages || [],
         pricingTiers: product.pricingTiers || [],
+        displayOrder: product.displayOrder !== undefined ? product.displayOrder : 999,
         isAvailable: product.isAvailable !== false,
       })
     }
@@ -57,6 +60,26 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
     }
   }
 
+  const handleAdditionalImageUpload = async (e, index) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    try {
+      setUploadingAdditional({ ...uploadingAdditional, [index]: true })
+      const formDataImage = new FormData()
+      formDataImage.append('image', file)
+
+      const response = await adminApi.uploadImage(formDataImage)
+      const newImages = [...formData.additionalImages]
+      newImages[index] = response.data.url
+      setFormData({ ...formData, additionalImages: newImages })
+    } catch (error) {
+      alert('Failed to upload image: ' + error.message)
+    } finally {
+      setUploadingAdditional({ ...uploadingAdditional, [index]: false })
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     
@@ -67,6 +90,7 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
         ...formData,
         slug: generateSlug(formData.name),
         basePrice: parseFloat(formData.basePrice),
+        displayOrder: parseInt(formData.displayOrder) || 999,
         additionalImages: formData.additionalImages,
         pricingTiers: formData.pricingTiers,
       }
@@ -146,6 +170,20 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
               />
             </div>
 
+            {/* Display Order */}
+            <div>
+              <label className="label">Display Order</label>
+              <input
+                type="number"
+                min="0"
+                value={formData.displayOrder}
+                onChange={(e) => setFormData({ ...formData, displayOrder: e.target.value })}
+                className="input"
+                placeholder="999"
+              />
+              <p className="text-sm text-gray-500 mt-1">Lower numbers appear first (0 = top)</p>
+            </div>
+
             {/* Image */}
             <div>
               <label className="label">Product Image *</label>
@@ -187,30 +225,49 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
             {/* Additional Images */}
             <div>
               <label className="label">Additional Images (Optional)</label>
-              <div className="space-y-2">
+              <p className="text-sm text-gray-500 mb-3">Upload up to 5 additional product images</p>
+              <div className="space-y-3">
                 {formData.additionalImages.map((url, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={url}
-                      onChange={(e) => {
-                        const newImages = [...formData.additionalImages]
-                        newImages[index] = e.target.value
-                        setFormData({ ...formData, additionalImages: newImages })
-                      }}
-                      className="input flex-1"
-                      placeholder="Enter image URL"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newImages = formData.additionalImages.filter((_, i) => i !== index)
-                        setFormData({ ...formData, additionalImages: newImages })
-                      }}
-                      className="btn-outline px-3"
-                    >
-                      <X size={18} />
-                    </button>
+                  <div key={index} className="flex gap-3 items-start">
+                    {url && (
+                      <img
+                        src={url}
+                        alt={`Additional ${index + 1}`}
+                        className="w-20 h-20 object-cover rounded-lg"
+                      />
+                    )}
+                    <div className="flex-1 flex gap-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleAdditionalImageUpload(e, index)}
+                        className="hidden"
+                        id={`additionalImage-${index}`}
+                        disabled={uploadingAdditional[index]}
+                      />
+                      <label
+                        htmlFor={`additionalImage-${index}`}
+                        className="btn-outline cursor-pointer inline-flex items-center gap-2 flex-1"
+                      >
+                        {uploadingAdditional[index] ? (
+                          <Loader2 className="animate-spin" size={18} />
+                        ) : (
+                          <Upload size={18} />
+                        )}
+                        {url ? 'Change Image' : 'Upload Image'}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newImages = formData.additionalImages.filter((_, i) => i !== index)
+                          setFormData({ ...formData, additionalImages: newImages })
+                        }}
+                        className="btn-outline px-3"
+                        title="Remove this image slot"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
                   </div>
                 ))}
                 {formData.additionalImages.length < 5 && (
@@ -224,11 +281,11 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
                     }}
                     className="btn-outline text-sm"
                   >
-                    + Add Image
+                    + Add Image Slot
                   </button>
                 )}
                 {formData.additionalImages.length >= 5 && (
-                  <p className="text-xs text-gray-500">Maximum 5 additional images</p>
+                  <p className="text-xs text-gray-500">Maximum 5 additional images reached</p>
                 )}
               </div>
             </div>
@@ -328,7 +385,7 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
               type="submit"
               form="productForm"
               className="btn-primary flex items-center gap-2"
-              disabled={saving || uploading || !formData.imageUrl}
+              disabled={saving || uploading || Object.values(uploadingAdditional).some(v => v) || !formData.imageUrl}
             >
               {saving ? (
                 <>

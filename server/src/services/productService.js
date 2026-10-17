@@ -68,6 +68,11 @@ const sanitizeProduct = (data = {}, { isUpdate = false } = {}) => {
     }
   }
 
+  const displayOrder = data.displayOrder !== undefined ? Number(data.displayOrder) : 999
+  if (!Number.isFinite(displayOrder) || displayOrder < 0) {
+    throw new AppError('Display order must be a valid non-negative number', 400)
+  }
+
   const product = {
     name,
     slug,
@@ -76,6 +81,7 @@ const sanitizeProduct = (data = {}, { isUpdate = false } = {}) => {
     imageUrl,
     additionalImages,
     pricingTiers,
+    displayOrder,
     isAvailable: data.isAvailable !== false,
   }
 

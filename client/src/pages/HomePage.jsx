@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, MapPin, Sparkles, Heart, Clock, Award } from 'lucide-react'
+import { ArrowRight, MapPin, Sparkles, Heart, Clock, Award, Leaf, CheckCircle } from 'lucide-react'
 import { publicApi } from '../services/api'
 import { DEFAULT_SETTINGS, CURRENCY_SYMBOL } from '../config/constants'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -25,20 +25,24 @@ const HomePage = () => {
       setLoading(true)
       setError(null)
       
-      const [settingsRes, productsRes] = await Promise.all([
+      const [settingsRes] = await Promise.all([
         publicApi.getSiteSettings(),
-        publicApi.getProducts({ featured: true, available: true, limit: 6 })
       ])
       
       setSettings({ ...DEFAULT_SETTINGS, ...settingsRes.data })
       
-      // If no featured products, get recent available products as fallback
-      if (!productsRes.data || productsRes.data.length === 0) {
-        const fallbackRes = await publicApi.getProducts({ available: true, limit: 6 })
-        setProducts(fallbackRes.data || [])
-      } else {
-        setProducts(productsRes.data)
-      }
+      // Get all available products and sort by displayOrder
+      const allProductsRes = await publicApi.getProducts({ available: true })
+      const allProducts = allProductsRes.data || []
+      
+      // Sort by displayOrder (lower first) and take first 6
+      const sortedProducts = allProducts.sort((a, b) => {
+        const orderA = a.displayOrder !== undefined ? a.displayOrder : 999
+        const orderB = b.displayOrder !== undefined ? b.displayOrder : 999
+        return orderA - orderB
+      })
+      
+      setProducts(sortedProducts.slice(0, 6))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -188,53 +192,47 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* How It Works - Enhanced */}
+      {/* Benefits Section - Why Choose Healthy Oats */}
       <section className="py-16 bg-gradient-to-br from-sage-green/5 to-warm-orange/5">
         <div className="container-custom">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold text-deep-green mb-4">
-              Build Your Perfect Bowl
+              Why Choose Healthy Oats?
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Three simple steps to your customized oatmeal experience
+              Nourishing bowls crafted with care, every single time.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              {
-                step: '1',
-                icon: '🥣',
-                title: 'Choose Your Base',
-                desc: 'Start with classic rolled oats, overnight oats, or protein-packed fitness oats'
+              { 
+                icon: Leaf, 
+                title: 'Fresh & Natural', 
+                desc: 'Made with premium quality oats and wholesome ingredients.' 
               },
-              {
-                step: '2',
-                icon: '🍓',
-                title: 'Add Your Toppings',
-                desc: 'Select from fresh fruits, crunchy nuts, seeds, honey, and premium add-ons'
+              { 
+                icon: Clock, 
+                title: 'Made to Order', 
+                desc: 'Every bowl is prepared fresh the moment you place your order.' 
               },
-              {
-                step: '3',
-                icon: '✨',
-                title: 'Enjoy Fresh',
-                desc: 'Made fresh to order and ready in minutes. Healthy never tasted so good!'
-              }
-            ].map((item, index) => (
-              <div key={index} className="relative">
-                <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 h-full border border-sage-green/10">
-                  <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-sage-green/20 to-warm-orange/20 rounded-2xl mb-6 mx-auto">
-                    <span className="text-4xl">{item.icon}</span>
-                  </div>
-                  <div className="absolute top-4 right-4 w-10 h-10 bg-deep-green text-white rounded-full flex items-center justify-center font-bold text-lg">
-                    {item.step}
-                  </div>
-                  <h3 className="text-2xl font-semibold text-deep-green mb-3 text-center">{item.title}</h3>
-                  <p className="text-gray-600 text-center leading-relaxed">{item.desc}</p>
+              { 
+                icon: Heart, 
+                title: 'Nutritious', 
+                desc: 'Packed with fiber, vitamins, and nutrients to fuel your day.' 
+              },
+              { 
+                icon: CheckCircle, 
+                title: 'Quality Ingredients', 
+                desc: 'We source only the best ingredients for a clean, healthy meal.' 
+              },
+            ].map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="text-center p-6 bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow">
+                <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-4">
+                  <Icon className="w-6 h-6 text-green-600" />
                 </div>
-                {index < 2 && (
-                  <div className="hidden md:block absolute top-1/2 -right-4 w-8 h-0.5 bg-gradient-to-r from-sage-green to-warm-orange"></div>
-                )}
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+                <p className="text-gray-500 text-sm">{desc}</p>
               </div>
             ))}
           </div>

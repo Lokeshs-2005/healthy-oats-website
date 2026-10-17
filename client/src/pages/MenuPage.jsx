@@ -44,6 +44,10 @@ const MenuPage = () => {
     .sort((a, b) => {
       if (sortBy === 'price-asc') return a.basePrice - b.basePrice
       if (sortBy === 'price-desc') return b.basePrice - a.basePrice
+      // Sort by displayOrder first, then by name
+      const orderA = a.displayOrder !== undefined ? a.displayOrder : 999
+      const orderB = b.displayOrder !== undefined ? b.displayOrder : 999
+      if (orderA !== orderB) return orderA - orderB
       return a.name.localeCompare(b.name)
     })
 
