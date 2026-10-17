@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Edit2, Trash2, Search, Eye, EyeOff, Star } from 'lucide-react'
+import { Plus, Edit2, Trash2, Search, Eye, EyeOff } from 'lucide-react'
 import { publicApi, adminApi } from '../../services/api'
 import { CURRENCY_SYMBOL } from '../../config/constants'
 import LoadingSpinner from '../../components/LoadingSpinner'
@@ -10,11 +10,9 @@ import ConfirmDialog from '../components/ConfirmDialog'
 
 const ProductsManagement = () => {
   const [products, setProducts] = useState([])
-  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('all')
   const [showForm, setShowForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
   const [deletingProduct, setDeletingProduct] = useState(null)
@@ -28,13 +26,9 @@ const ProductsManagement = () => {
       setLoading(true)
       setError(null)
 
-      const [productsRes, categoriesRes] = await Promise.all([
-        publicApi.getProducts(),
-        publicApi.getCategories(),
-      ])
+      const productsRes = await publicApi.getProducts()
 
       setProducts(productsRes.data || [])
-      setCategories(categoriesRes.data || [])
     } catch (err) {
       setError(err.message)
     } finally {
@@ -70,8 +64,7 @@ const ProductsManagement = () => {
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === 'all' || product.categoryId === selectedCategory
-    return matchesSearch && matchesCategory
+    return matchesSearch
   })
 
   if (loading) {
@@ -101,29 +94,15 @@ const ProductsManagement = () => {
 
       {/* Filters */}
       <div className="card p-4 mb-6">
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input pl-10 w-full"
-            />
-          </div>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="input"
-          >
-            <option value="all">All Categories</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="input pl-10 w-full"
+          />
         </div>
       </div>
 
@@ -146,9 +125,6 @@ const ProductsManagement = () => {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Product
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Category
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Price
@@ -180,20 +156,12 @@ const ProductsManagement = () => {
                         <div>
                           <div className="font-medium flex items-center gap-2">
                             {product.name}
-                            {product.isFeatured && (
-                              <Star size={14} className="text-yellow-500 fill-yellow-500" />
-                            )}
                           </div>
                           <div className="text-sm text-gray-500 line-clamp-1">
-                            {product.shortDescription}
+                            {product.description}
                           </div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm">
-                        {categories.find((c) => c.id === product.categoryId)?.name || '-'}
-                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="font-medium">
@@ -249,7 +217,6 @@ const ProductsManagement = () => {
       {showForm && (
         <ProductFormModal
           product={editingProduct}
-          categories={categories}
           onClose={() => {
             setShowForm(false)
             setEditingProduct(null)

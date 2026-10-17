@@ -3,8 +3,6 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { 
   LayoutDashboard, 
   Package, 
-  FolderTree, 
-  Plus, 
   Settings, 
   LogOut, 
   Menu, 
@@ -31,8 +29,6 @@ const AdminLayout = () => {
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
     { to: '/admin/orders', icon: ShoppingBag, label: 'Orders' },
     { to: '/admin/products', icon: Package, label: 'Products' },
-    { to: '/admin/categories', icon: FolderTree, label: 'Categories' },
-    { to: '/admin/addons', icon: Plus, label: 'Add-ons' },
     { to: '/admin/settings', icon: Settings, label: 'Settings' },
   ]
 

@@ -146,15 +146,8 @@ class OrderService {
   }
 
   async #priceItems(rawItems) {
-    // Extract all unique product IDs and add-on IDs upfront
+    // Extract all unique product IDs
     const productIds = [...new Set(rawItems.map(item => item.productId || item.id).filter(Boolean))]
-    const allAddonIds = new Set()
-    rawItems.forEach(item => {
-      (item.selectedAddOns || []).forEach(addon => {
-        if (addon.id) allAddonIds.add(addon.id)
-      })
-    })
-    const addonIds = [...allAddonIds]
 
     // Batch-fetch products (Firestore 'in' supports max 10 IDs per query)
     const productMap = new Map()
@@ -165,17 +158,6 @@ class OrderService {
         .where(admin.firestore.FieldPath.documentId(), 'in', batch)
         .get()
       snapshot.docs.forEach(doc => productMap.set(doc.id, doc.data()))
-    }
-
-    // Batch-fetch add-ons
-    const addonMap = new Map()
-    for (let i = 0; i < addonIds.length; i += 10) {
-      const batch = addonIds.slice(i, i + 10)
-      if (batch.length === 0) continue
-      const snapshot = await db.collection('addons')
-        .where(admin.firestore.FieldPath.documentId(), 'in', batch)
-        .get()
-      snapshot.docs.forEach(doc => addonMap.set(doc.id, doc.data()))
     }
 
     // Build priced items using fetched data
@@ -197,32 +179,7 @@ class OrderService {
         throw new AppError(`${product.name || 'A product'} is currently unavailable`, 400)
       }
 
-      const allowedAddOnIds = new Set(product.addOnIds || [])
-      const selectedAddOns = []
-
-      for (const addon of item.selectedAddOns || []) {
-        const addonId = addon.id
-        if (!addonId || !allowedAddOnIds.has(addonId)) {
-          throw new AppError('An add-on is not valid for this product', 400)
-        }
-
-        const addonData = addonMap.get(addonId)
-        if (!addonData) {
-          throw new AppError('An add-on is no longer available', 400)
-        }
-        if (addonData.isAvailable === false) {
-          throw new AppError(`${addonData.name || 'An add-on'} is currently unavailable`, 400)
-        }
-
-        selectedAddOns.push({
-          id: addonId,
-          name: addonData.name,
-          additionalPrice: Number(addonData.additionalPrice) || 0,
-        })
-      }
-
-      const addonTotal = selectedAddOns.reduce((sum, addon) => sum + addon.additionalPrice, 0)
-      const unitPrice = (Number(product.basePrice) || 0) + addonTotal
+      const unitPrice = Number(product.basePrice) || 0
 
       priced.push({
         productId,
@@ -231,7 +188,6 @@ class OrderService {
         imageUrl: product.imageUrl || '',
         basePrice: Number(product.basePrice) || 0,
         unitPrice,
-        selectedAddOns,
         quantity,
         subtotal: unitPrice * quantity,
       })

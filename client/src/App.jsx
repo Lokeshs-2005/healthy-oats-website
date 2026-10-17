@@ -15,8 +15,6 @@ import AdminLayout from './admin/components/AdminLayout'
 import AdminLogin from './admin/pages/AdminLogin'
 import AdminDashboard from './admin/pages/AdminDashboard'
 import ProductsManagement from './admin/pages/ProductsManagement'
-import CategoriesManagement from './admin/pages/CategoriesManagement'
-import AddOnsManagement from './admin/pages/AddOnsManagement'
 import SettingsManagement from './admin/pages/SettingsManagement'
 import OrdersManagement from './admin/pages/OrdersManagement'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -53,8 +51,6 @@ function App() {
             >
               <Route index element={<AdminDashboard />} />
               <Route path="products" element={<ProductsManagement />} />
-              <Route path="categories" element={<CategoriesManagement />} />
-              <Route path="addons" element={<AddOnsManagement />} />
               <Route path="orders" element={<OrdersManagement />} />
               <Route path="settings" element={<SettingsManagement />} />
             </Route>

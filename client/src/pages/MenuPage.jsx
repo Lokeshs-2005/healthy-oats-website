@@ -10,12 +10,9 @@ import EmptyState from '../components/EmptyState'
 
 const MenuPage = () => {
   const [products, setProducts] = useState([])
-  const [categories, setCategories] = useState([])
-  const [addOns, setAddOns] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('all')
   const [sortBy, setSortBy] = useState('name')
 
   useEffect(() => {
@@ -29,15 +26,9 @@ const MenuPage = () => {
       setLoading(true)
       setError(null)
       
-      const [productsRes, categoriesRes, addOnsRes] = await Promise.all([
-        publicApi.getProducts(),
-        publicApi.getCategories(),
-        publicApi.getAddOns()
-      ])
+      const productsRes = await publicApi.getProducts()
       
       setProducts(productsRes.data || [])
-      setCategories(categoriesRes.data || [])
-      setAddOns(addOnsRes.data || [])
     } catch (err) {
       setError(err.message)
     } finally {
@@ -48,8 +39,7 @@ const MenuPage = () => {
   const filteredProducts = products
     .filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesCategory = selectedCategory === 'all' || product.categoryId === selectedCategory
-      return matchesSearch && matchesCategory && product.isAvailable
+      return matchesSearch && product.isAvailable
     })
     .sort((a, b) => {
       if (sortBy === 'price-asc') return a.basePrice - b.basePrice
@@ -92,26 +82,8 @@ const MenuPage = () => {
                 />
               </div>
 
-              {/* Category and Sort Filters */}
+              {/* Sort Filter */}
               <div className="flex flex-col md:flex-row gap-4">
-                {/* Category Filter */}
-                <div className="flex-1">
-                  <label className="block text-sm font-medium mb-2">Category</label>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="input"
-                  >
-                    <option value="all">All Categories</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Sort Filter */}
                 <div className="flex-1">
                   <label className="block text-sm font-medium mb-2">Sort By</label>
                   <select
@@ -143,64 +115,6 @@ const MenuPage = () => {
                 {filteredProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
-              </div>
-            )}
-
-            {/* Add-ons Section */}
-            {addOns.filter(addon => addon.isAvailable).length > 0 && (
-              <div className="mt-16 pt-12 border-t-2 border-dashed border-sage-green/30">
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl md:text-4xl font-bold text-deep-green mb-3 flex items-center justify-center gap-2">
-                    ✨ Special Add-ons
-                  </h2>
-                  <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                    Enhance your oatmeal with these delicious premium extras
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {addOns.filter(addon => addon.isAvailable).map((addon) => (
-                    <div
-                      key={addon.id}
-                      className="card p-6 bg-gradient-to-br from-sage-green/5 to-warm-orange/5 border-2 border-sage-green/20 hover:border-sage-green hover:shadow-lg transition-all group"
-                    >
-                      <div className="text-center mb-4">
-                        <div className="w-16 h-16 bg-gradient-to-br from-sage-green/20 to-warm-orange/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <span className="text-3xl">🌟</span>
-                        </div>
-                        <h3 className="font-bold text-lg text-deep-green mb-2">
-                          {addon.name}
-                        </h3>
-                        {addon.description && (
-                          <p className="text-sm text-gray-600 mb-3 line-clamp-3">
-                            {addon.description}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="text-center pt-4 border-t border-gray-200">
-                        {addon.additionalPrice > 0 ? (
-                          <div className="text-2xl font-bold text-sage-green mb-3">
-                            +{CURRENCY_SYMBOL}{addon.additionalPrice}
-                          </div>
-                        ) : (
-                          <div className="text-lg font-semibold text-green-600 mb-3">
-                            Complimentary
-                          </div>
-                        )}
-                        <p className="text-xs text-gray-500 italic">
-                          Available with select products
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-8 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg max-w-3xl mx-auto">
-                  <p className="text-sm text-amber-800">
-                    <strong>How to use add-ons:</strong> Open a product, tap the extras you want, then add it to cart. The price updates before you order.
-                  </p>
-                </div>
               </div>
             )}
           </>

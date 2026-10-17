@@ -186,16 +186,9 @@ const CheckoutPage = () => {
           Back to Cart
         </button>
 
-        <h1 className="text-3xl md:text-4xl font-bold text-deep-green mb-4">
+        <h1 className="text-3xl md:text-4xl font-bold text-deep-green mb-8">
           Checkout
         </h1>
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-8">
-          <span className="text-sage-green font-medium">Cart</span>
-          <span>/</span>
-          <span className="text-deep-green font-semibold">Checkout</span>
-          <span>/</span>
-          <span>Confirmation</span>
-        </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Checkout Form */}
@@ -370,7 +363,6 @@ const CheckoutPage = () => {
                     />
                     <div className="flex-1">
                       <p className="font-semibold">Cash on Delivery</p>
-                      <p className="text-sm text-gray-600">Pay when you receive your order</p>
                     </div>
                   </label>
 
@@ -385,16 +377,15 @@ const CheckoutPage = () => {
                     />
                     <div className="flex-1">
                       <p className="font-semibold">Pay with UPI</p>
-                      <p className="text-sm text-gray-600">PhonePe, Google Pay, Paytm, or any UPI app</p>
                     </div>
                   </label>
                 </div>
               </div>
 
-              {/* Order Notes (Optional) */}
+              {/* Special Instructions */}
               <div className="card p-6">
                 <label htmlFor="notes" className="block text-sm font-medium mb-2">
-                  Order Notes (Optional)
+                  Special Instructions or Add-ons (Optional)
                 </label>
                 <textarea
                   id="notes"
@@ -403,7 +394,7 @@ const CheckoutPage = () => {
                   onChange={handleInputChange}
                   rows={3}
                   className="input"
-                  placeholder="Any special instructions for your order?"
+                  placeholder="Any add-ons or special instructions for your order?"
                 />
               </div>
 
@@ -461,11 +452,6 @@ const CheckoutPage = () => {
                       <p className="text-xs text-gray-500">
                         {CURRENCY_SYMBOL}{getItemUnitPrice(item)} × {item.quantity}
                       </p>
-                      {item.selectedAddOns?.length > 0 && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          {item.selectedAddOns.map((addon) => addon.name).join(', ')}
-                        </p>
-                      )}
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="font-bold text-deep-green">
@@ -492,14 +478,6 @@ const CheckoutPage = () => {
                     )}
                   </span>
                 </div>
-
-                {subtotal < freeFrom && deliveryCharge > 0 && (
-                  <div className="bg-amber-50 border-l-4 border-amber-500 p-3 rounded">
-                    <p className="text-xs text-amber-800">
-                      Add <strong>{CURRENCY_SYMBOL}{freeFrom - subtotal}</strong> more for free delivery.
-                    </p>
-                  </div>
-                )}
 
                 <div className="border-t border-gray-300 pt-4 mt-3">
                   <div className="flex justify-between items-center">

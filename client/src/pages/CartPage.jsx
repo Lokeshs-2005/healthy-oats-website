@@ -270,7 +270,11 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
 
         <div className="flex items-center justify-between mt-4">
           {/* Quantity Controls */}
-          <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
+          <div 
+            role="group" 
+            aria-label={`Quantity for ${item.name}`}
+            className="flex items-center gap-3 bg-gray-50 rounded-lg p-1"
+          >
             <button
               onClick={handleDecrease}
               className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-white transition-colors"
@@ -279,7 +283,7 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
               <Minus size={16} />
             </button>
             
-            <span className="w-8 text-center font-semibold">{item.quantity}</span>
+            <span className="w-8 text-center font-semibold" aria-live="polite" aria-atomic="true">{item.quantity}</span>
             
             <button
               onClick={handleIncrease}

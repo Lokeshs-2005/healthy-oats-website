@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, MessageCircle, Package, ShoppingCart, Plus, Minus } from 'lucide-react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, ShoppingCart, Plus, Minus } from 'lucide-react'
 import { publicApi } from '../services/api'
-import { CURRENCY_SYMBOL, DEFAULT_SETTINGS } from '../config/constants'
+import { CURRENCY_SYMBOL } from '../config/constants'
 import { useCart } from '../contexts/CartContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorMessage from '../components/ErrorMessage'
@@ -12,16 +12,12 @@ const ProductDetailPage = () => {
   const navigate = useNavigate()
   const { addToCart } = useCart()
   const [product, setProduct] = useState(null)
-  const [addOns, setAddOns] = useState([])
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [quantity, setQuantity] = useState(1)
-  const [selectedAddOns, setSelectedAddOns] = useState([])
 
   useEffect(() => {
-    window.scrollTo(0, 0) // Scroll to top
+    window.scrollTo(0, 0)
     loadData()
   }, [slug])
 
@@ -30,15 +26,9 @@ const ProductDetailPage = () => {
       setLoading(true)
       setError(null)
       
-      const [productRes, addOnsRes, settingsRes] = await Promise.all([
-        publicApi.getProductBySlug(slug),
-        publicApi.getAddOns(),
-        publicApi.getSiteSettings()
-      ])
+      const productRes = await publicApi.getProductBySlug(slug)
       
       setProduct(productRes.data)
-      setAddOns(addOnsRes.data || [])
-      setSettings({ ...DEFAULT_SETTINGS, ...settingsRes.data })
       document.title = `${productRes.data.name} - Healthy Oats`
     } catch (err) {
       setError(err.message)
@@ -47,35 +37,12 @@ const ProductDetailPage = () => {
     }
   }
 
-  const handleWhatsAppEnquiry = () => {
-    if (settings.whatsappNumber && product) {
-      const message = `Hi, I am interested in ${product.name}. Could you share its current availability and details?`
-      const url = `https://wa.me/${settings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`
-      window.open(url, '_blank')
-    }
-  }
-
-  const toggleAddOn = (addon) => {
-    setSelectedAddOns((prev) => {
-      const exists = prev.some((item) => item.id === addon.id)
-      if (exists) {
-        return prev.filter((item) => item.id !== addon.id)
-      }
-      return [...prev, { id: addon.id, name: addon.name, additionalPrice: addon.additionalPrice || 0 }]
-    })
-  }
-
-  const unitPrice = (product?.basePrice || 0) + selectedAddOns.reduce(
-    (sum, addon) => sum + (Number(addon.additionalPrice) || 0),
-    0
-  )
-
   const handleAddToCart = () => {
-    addToCart(product, quantity, selectedAddOns)
+    addToCart(product, quantity, [])
   }
 
   const handleBuyNow = () => {
-    addToCart(product, quantity, selectedAddOns)
+    addToCart(product, quantity, [])
     navigate('/checkout')
   }
 
@@ -101,14 +68,6 @@ const ProductDetailPage = () => {
     )
   }
 
-  const allImages = product.additionalImages?.length 
-    ? [product.imageUrl, ...product.additionalImages] 
-    : [product.imageUrl]
-
-  const productAddOns = addOns.filter(
-    addon => product.addOnIds?.includes(addon.id) && addon.isAvailable
-  )
-
   return (
     <div className="min-h-screen py-16">
       <div className="container-custom">
@@ -122,12 +81,12 @@ const ProductDetailPage = () => {
         </button>
 
         <div className="grid md:grid-cols-2 gap-12">
-          {/* Product Images */}
+          {/* Product Image */}
           <div>
-            <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden mb-4">
-              {allImages[currentImageIndex] ? (
+            <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden">
+              {product.imageUrl ? (
                 <img
-                  src={allImages[currentImageIndex]}
+                  src={product.imageUrl}
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />
@@ -137,29 +96,6 @@ const ProductDetailPage = () => {
                 </div>
               )}
             </div>
-
-            {/* Image Thumbnails */}
-            {allImages.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto">
-                {allImages.map((img, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentImageIndex(index)}
-                    className={`w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors ${
-                      currentImageIndex === index
-                        ? 'border-deep-green'
-                        : 'border-transparent'
-                    }`}
-                  >
-                    <img
-                      src={img}
-                      alt={`${product.name} ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Product Info */}
@@ -168,13 +104,10 @@ const ProductDetailPage = () => {
               {product.name}
             </h1>
             
-            <div className="flex items-baseline gap-4 mb-6">
+            <div className="mb-6">
               <span className="text-4xl font-bold text-deep-green">
-                {CURRENCY_SYMBOL}{unitPrice}
+                {CURRENCY_SYMBOL}{product.basePrice}
               </span>
-              {product.servingSize && (
-                <span className="text-gray-500">{product.servingSize}</span>
-              )}
             </div>
 
             {!product.isAvailable && (
@@ -183,78 +116,7 @@ const ProductDetailPage = () => {
               </div>
             )}
 
-            <p className="text-lg text-gray-700 mb-6">{product.description}</p>
-
-            {/* Ingredients */}
-            {product.ingredients && (
-              <div className="mb-6">
-                <h3 className="font-semibold text-lg mb-2">Ingredients</h3>
-                <p className="text-gray-700">{product.ingredients}</p>
-              </div>
-            )}
-
-            {/* Allergens */}
-            {product.allergens && (
-              <div className="mb-6">
-                <h3 className="font-semibold text-lg mb-2">Allergen Information</h3>
-                <p className="text-gray-700">{product.allergens}</p>
-              </div>
-            )}
-
-            {/* Nutritional Info */}
-            {product.nutritionalInfo && (
-              <div className="mb-6">
-                <h3 className="font-semibold text-lg mb-2">Nutritional Information</h3>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <pre className="text-sm text-gray-700 whitespace-pre-wrap">
-                    {product.nutritionalInfo}
-                  </pre>
-                </div>
-              </div>
-            )}
-
-            {/* Storage Instructions */}
-            {product.storageInstructions && (
-              <div className="mb-6">
-                <h3 className="font-semibold text-lg mb-2">Storage Instructions</h3>
-                <p className="text-gray-700">{product.storageInstructions}</p>
-              </div>
-            )}
-
-            {/* Available Add-ons */}
-            {productAddOns.length > 0 && (
-              <div className="mb-6">
-                <h3 className="font-semibold text-lg mb-1">Customize with add-ons</h3>
-                <p className="text-sm text-gray-500 mb-3">Tap to add extras to this bowl</p>
-                <div className="space-y-2">
-                  {productAddOns.map((addon) => {
-                    const isSelected = selectedAddOns.some((item) => item.id === addon.id)
-                    return (
-                      <button
-                        key={addon.id}
-                        type="button"
-                        onClick={() => toggleAddOn(addon)}
-                        className={`w-full text-left flex justify-between items-center rounded-lg p-3 border-2 transition-colors ${
-                          isSelected
-                            ? 'border-deep-green bg-deep-green/5'
-                            : 'border-transparent bg-gray-50 hover:border-sage-green'
-                        }`}
-                      >
-                        <div>
-                          <p className="font-medium">{addon.name}</p>
-                          {addon.description && (
-                            <p className="text-sm text-gray-600">{addon.description}</p>
-                          )}
-                        </div>
-                        <span className="text-deep-green font-semibold ml-3">
-                          {addon.additionalPrice > 0 ? `+${CURRENCY_SYMBOL}${addon.additionalPrice}` : 'Free'}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+            <p className="text-lg text-gray-700 mb-8 leading-relaxed">{product.description}</p>
 
             {/* Action Buttons */}
             {product.isAvailable && (
@@ -262,7 +124,11 @@ const ProductDetailPage = () => {
                 {/* Quantity Selector */}
                 <div className="flex items-center gap-4">
                   <label className="font-semibold">Quantity:</label>
-                  <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-2">
+                  <div 
+                    role="group" 
+                    aria-label={`Quantity for ${product.name}`}
+                    className="flex items-center gap-3 bg-gray-50 rounded-lg p-2"
+                  >
                     <button
                       onClick={decrementQuantity}
                       className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-white transition-colors"
@@ -271,7 +137,7 @@ const ProductDetailPage = () => {
                       <Minus size={20} />
                     </button>
                     
-                    <span className="w-12 text-center font-semibold text-lg">{quantity}</span>
+                    <span className="w-12 text-center font-semibold text-lg" aria-live="polite" aria-atomic="true">{quantity}</span>
                     
                     <button
                       onClick={incrementQuantity}
@@ -290,7 +156,7 @@ const ProductDetailPage = () => {
                     className="btn-primary flex-1 flex items-center justify-center gap-2"
                   >
                     <ShoppingCart size={20} />
-                    Buy Now - {CURRENCY_SYMBOL}{unitPrice * quantity}
+                    Buy Now - {CURRENCY_SYMBOL}{product.basePrice * quantity}
                   </button>
 
                   <button
@@ -301,34 +167,6 @@ const ProductDetailPage = () => {
                     Add to Cart
                   </button>
                 </div>
-
-                {/* WhatsApp Enquiry Button */}
-                {settings.whatsappNumber && (
-                  <button
-                    onClick={handleWhatsAppEnquiry}
-                    className="btn-outline w-full md:w-auto flex items-center justify-center gap-2"
-                  >
-                    <MessageCircle size={20} />
-                    Enquire on WhatsApp
-                  </button>
-                )}
-              </div>
-            )}
-
-            {!product.isAvailable && (
-              <div className="space-y-4">
-                <p className="text-gray-600">
-                  This item is currently unavailable. Please check back later.
-                </p>
-                {settings.whatsappNumber && (
-                  <button
-                    onClick={handleWhatsAppEnquiry}
-                    className="btn-outline w-full md:w-auto flex items-center justify-center gap-2"
-                  >
-                    <MessageCircle size={20} />
-                    Get Notified on WhatsApp
-                  </button>
-                )}
               </div>
             )}
           </div>

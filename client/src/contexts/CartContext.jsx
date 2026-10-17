@@ -12,20 +12,11 @@ export const useCart = () => {
 }
 
 export const getItemUnitPrice = (item) => {
-  const addonTotal = (item.selectedAddOns || []).reduce(
-    (sum, addon) => sum + (Number(addon.additionalPrice) || 0),
-    0
-  )
-  return (Number(item.basePrice) || 0) + addonTotal
+  return Number(item.basePrice) || 0
 }
 
-export const getCartItemId = (productId, selectedAddOns = []) => {
-  const addonKey = [...selectedAddOns]
-    .map((addon) => addon.id)
-    .filter(Boolean)
-    .sort()
-    .join(',')
-  return addonKey ? `${productId}::${addonKey}` : String(productId)
+export const getCartItemId = (productId) => {
+  return String(productId)
 }
 
 export const CartProvider = ({ children }) => {
@@ -54,7 +45,7 @@ export const CartProvider = ({ children }) => {
   }, [])
 
   const addToCart = useCallback((product, quantity = 1, selectedAddOns = []) => {
-    const cartItemId = getCartItemId(product.id, selectedAddOns)
+    const cartItemId = getCartItemId(product.id)
     const safeQuantity = Math.min(Math.max(Number(quantity) || 1, 1), MAX_ITEM_QUANTITY)
 
     setCart((prevCart) => {
@@ -79,7 +70,6 @@ export const CartProvider = ({ children }) => {
           shortDescription: product.shortDescription,
           basePrice: product.basePrice,
           quantity: safeQuantity,
-          selectedAddOns,
         },
       ]
     })

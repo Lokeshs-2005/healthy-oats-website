@@ -1,55 +1,41 @@
 import { useState, useEffect } from 'react'
 import { X, Upload, Loader2 } from 'lucide-react'
-import { adminApi, publicApi } from '../../services/api'
+import { adminApi } from '../../services/api'
 import { CURRENCY_SYMBOL } from '../../config/constants'
 import LoadingSpinner from '../../components/LoadingSpinner'
 
-const ProductFormModal = ({ product, categories, onClose, onSave }) => {
+const ProductFormModal = ({ product, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     name: '',
-    slug: '',
-    shortDescription: '',
     description: '',
-    categoryId: '',
     basePrice: '',
-    servingSize: '',
-    ingredients: '',
-    allergens: '',
-    storageInstructions: '',
     imageUrl: '',
-    additionalImages: [],
-    addOnIds: [],
-    isFeatured: false,
     isAvailable: true,
-    nutritionalInfo: '',
-    labels: '',
   })
   
-  const [addOns, setAddOns] = useState([])
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    loadAddOns()
     if (product) {
       setFormData({
-        ...product,
-        additionalImages: product.additionalImages || [],
-        addOnIds: product.addOnIds || [],
+        name: product.name || '',
+        description: product.description || '',
+        basePrice: product.basePrice || '',
+        imageUrl: product.imageUrl || '',
+        isAvailable: product.isAvailable !== false,
       })
     }
   }, [product])
 
-  const loadAddOns = async () => {
-    try {
-      const response = await publicApi.getAddOns()
-      setAddOns(response.data || [])
-    } catch (error) {
-      console.error('Failed to load add-ons:', error)
-    }
+  const generateSlug = (name) => {
+    return name
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
   }
 
-  const handleImageUpload = async (e, isAdditional = false) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
 
@@ -59,33 +45,12 @@ const ProductFormModal = ({ product, categories, onClose, onSave }) => {
       formDataImage.append('image', file)
 
       const response = await adminApi.uploadImage(formDataImage)
-
-      if (isAdditional) {
-        setFormData({
-          ...formData,
-          additionalImages: [...formData.additionalImages, response.data.url],
-        })
-      } else {
-        setFormData({ ...formData, imageUrl: response.data.url })
-      }
+      setFormData({ ...formData, imageUrl: response.data.url })
     } catch (error) {
       alert('Failed to upload image: ' + error.message)
     } finally {
       setUploading(false)
     }
-  }
-
-  const handleRemoveImage = (index) => {
-    const newImages = formData.additionalImages.filter((_, i) => i !== index)
-    setFormData({ ...formData, additionalImages: newImages })
-  }
-
-  const handleAddOnToggle = (addOnId) => {
-    const newAddOnIds = formData.addOnIds.includes(addOnId)
-      ? formData.addOnIds.filter(id => id !== addOnId)
-      : [...formData.addOnIds, addOnId]
-    
-    setFormData({ ...formData, addOnIds: newAddOnIds })
   }
 
   const handleSubmit = async (e) => {
@@ -96,6 +61,7 @@ const ProductFormModal = ({ product, categories, onClose, onSave }) => {
       
       const data = {
         ...formData,
+        slug: generateSlug(formData.name),
         basePrice: parseFloat(formData.basePrice),
       }
 
@@ -115,7 +81,7 @@ const ProductFormModal = ({ product, categories, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
         {/* Fixed Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-2xl font-bold text-deep-green">
@@ -133,157 +99,50 @@ const ProductFormModal = ({ product, categories, onClose, onSave }) => {
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <form onSubmit={handleSubmit} className="space-y-6" id="productForm">
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Basic Information</h3>
-            
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Product Name *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  className="input"
-                />
-              </div>
-
-              <div>
-                <label className="label">Slug *</label>
-                <input
-                  type="text"
-                  value={formData.slug}
-                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                  required
-                  className="input"
-                  placeholder="banana-oats"
-                />
-              </div>
-            </div>
-
+            {/* Product Name */}
             <div>
-              <label className="label">Short Description *</label>
+              <label className="label">Product Name *</label>
               <input
                 type="text"
-                value={formData.shortDescription}
-                onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
                 className="input"
-                placeholder="A brief one-line description"
+                placeholder="Banana Oats Cup"
               />
             </div>
 
+            {/* Description */}
             <div>
-              <label className="label">Full Description *</label>
+              <label className="label">Description *</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 required
                 className="input"
-                rows="4"
+                rows="5"
+                placeholder="Describe your product..."
               />
             </div>
 
-            <div className="grid md:grid-cols-3 gap-4">
-              <div>
-                <label className="label">Category *</label>
-                <select
-                  value={formData.categoryId}
-                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                  required
-                  className="input"
-                >
-                  <option value="">Select category</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="label">Base Price ({CURRENCY_SYMBOL}) *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.basePrice}
-                  onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
-                  required
-                  className="input"
-                />
-              </div>
-
-              <div>
-                <label className="label">Serving Size</label>
-                <input
-                  type="text"
-                  value={formData.servingSize}
-                  onChange={(e) => setFormData({ ...formData, servingSize: e.target.value })}
-                  className="input"
-                  placeholder="250g"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Product Details */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Product Details</h3>
-            
+            {/* Price */}
             <div>
-              <label className="label">Ingredients</label>
-              <textarea
-                value={formData.ingredients}
-                onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
-                className="input"
-                rows="2"
-                placeholder="List the ingredients"
-              />
-            </div>
-
-            <div>
-              <label className="label">Allergen Information</label>
+              <label className="label">Price ({CURRENCY_SYMBOL}) *</label>
               <input
-                type="text"
-                value={formData.allergens}
-                onChange={(e) => setFormData({ ...formData, allergens: e.target.value })}
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.basePrice}
+                onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
+                required
                 className="input"
-                placeholder="e.g., Contains nuts, dairy"
+                placeholder="99.00"
               />
             </div>
 
+            {/* Image */}
             <div>
-              <label className="label">Storage Instructions</label>
-              <input
-                type="text"
-                value={formData.storageInstructions}
-                onChange={(e) => setFormData({ ...formData, storageInstructions: e.target.value })}
-                className="input"
-                placeholder="e.g., Refrigerate after opening"
-              />
-            </div>
-
-            <div>
-              <label className="label">Nutritional Information (Optional)</label>
-              <textarea
-                value={formData.nutritionalInfo}
-                onChange={(e) => setFormData({ ...formData, nutritionalInfo: e.target.value })}
-                className="input"
-                rows="3"
-                placeholder="Calories, Protein, Carbs, Fat, etc."
-              />
-            </div>
-          </div>
-
-          {/* Images */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Images</h3>
-            
-            <div>
-              <label className="label">Main Image</label>
+              <label className="label">Product Image *</label>
               <div className="flex gap-4 items-start">
                 {formData.imageUrl && (
                   <img
@@ -296,7 +155,7 @@ const ProductFormModal = ({ product, categories, onClose, onSave }) => {
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => handleImageUpload(e, false)}
+                    onChange={handleImageUpload}
                     className="hidden"
                     id="mainImage"
                     disabled={uploading}
@@ -312,98 +171,24 @@ const ProductFormModal = ({ product, categories, onClose, onSave }) => {
                     )}
                     {formData.imageUrl ? 'Change Image' : 'Upload Image'}
                   </label>
+                  {!formData.imageUrl && (
+                    <p className="text-sm text-gray-500 mt-2">Required field</p>
+                  )}
                 </div>
               </div>
             </div>
 
+            {/* Availability */}
             <div>
-              <label className="label">Additional Images</label>
-              <div className="grid grid-cols-4 gap-4 mb-4">
-                {formData.additionalImages.map((img, index) => (
-                  <div key={index} className="relative">
-                    <img
-                      src={img}
-                      alt={`Additional ${index + 1}`}
-                      className="w-full aspect-square object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(index)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleImageUpload(e, true)}
-                className="hidden"
-                id="additionalImages"
-                disabled={uploading}
-              />
-              <label
-                htmlFor="additionalImages"
-                className="btn-outline cursor-pointer inline-flex items-center gap-2"
-              >
-                {uploading ? (
-                  <Loader2 className="animate-spin" size={20} />
-                ) : (
-                  <Upload size={20} />
-                )}
-                Add More Images
-              </label>
-            </div>
-          </div>
-
-          {/* Available Add-ons */}
-          {addOns.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Available Add-ons</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {addOns.map((addOn) => (
-                  <label
-                    key={addOn.id}
-                    className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.addOnIds.includes(addOn.id)}
-                      onChange={() => handleAddOnToggle(addOn.id)}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm">{addOn.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Settings */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Settings</h3>
-            <div className="flex gap-6">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.isFeatured}
-                  onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
-                  className="w-4 h-4"
-                />
-                <span>Featured Product</span>
-              </label>
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formData.isAvailable}
                   onChange={(e) => setFormData({ ...formData, isAvailable: e.target.checked })}
                   className="w-4 h-4"
                 />
-                <span>Available</span>
+                <span className="font-medium">Available for purchase</span>
               </label>
-            </div>
             </div>
           </form>
         </div>
@@ -423,7 +208,7 @@ const ProductFormModal = ({ product, categories, onClose, onSave }) => {
               type="submit"
               form="productForm"
               className="btn-primary flex items-center gap-2"
-              disabled={saving || uploading}
+              disabled={saving || uploading || !formData.imageUrl}
             >
               {saving ? (
                 <>
