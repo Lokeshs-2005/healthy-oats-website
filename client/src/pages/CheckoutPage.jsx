@@ -448,7 +448,10 @@ const CheckoutPage = () => {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm line-clamp-2 mb-1">{item.name}</p>
+                      <p className="font-semibold text-sm line-clamp-2 mb-1">
+                        {item.name}
+                        {item.selectedQuantity && <span className="text-gray-600"> – {item.selectedQuantity}</span>}
+                      </p>
                       <p className="text-xs text-gray-500">
                         {CURRENCY_SYMBOL}{getItemUnitPrice(item)} × {item.quantity}
                       </p>

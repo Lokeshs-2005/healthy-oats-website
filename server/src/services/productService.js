@@ -36,12 +36,46 @@ const sanitizeProduct = (data = {}, { isUpdate = false } = {}) => {
     if (!imageUrl) throw new AppError('Product image is required', 400)
   }
 
+  // Additional Images validation
+  let additionalImages = []
+  if (data.additionalImages !== undefined) {
+    if (Array.isArray(data.additionalImages)) {
+      additionalImages = data.additionalImages
+        .slice(0, 5)
+        .map(url => trimString(url, 500))
+        .filter(url => url.length > 0)
+    }
+  }
+
+  // Pricing Tiers validation
+  let pricingTiers = []
+  if (data.pricingTiers !== undefined) {
+    if (Array.isArray(data.pricingTiers)) {
+      pricingTiers = data.pricingTiers
+        .slice(0, 10)
+        .map(tier => {
+          const quantity = trimString(tier.quantity, 50)
+          const price = Number(tier.price)
+          if (!quantity || quantity.length === 0) {
+            throw new AppError('Pricing tier quantity is required', 400)
+          }
+          if (!Number.isFinite(price) || price < 0) {
+            throw new AppError('Pricing tier price must be a valid non-negative number', 400)
+          }
+          return { quantity, price }
+        })
+        .filter(tier => tier.quantity && Number.isFinite(tier.price))
+    }
+  }
+
   const product = {
     name,
     slug,
     description,
     basePrice,
     imageUrl,
+    additionalImages,
+    pricingTiers,
     isAvailable: data.isAvailable !== false,
   }
 

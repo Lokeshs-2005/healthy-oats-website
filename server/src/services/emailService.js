@@ -46,7 +46,7 @@ export const sendOrderConfirmationEmail = async (orderData, settings = {}) => {
         (item) => `
           <tr>
             <td style="padding: 12px 8px; border-bottom: 1px solid #e5e5e5; color: #374151;">
-              ${escapeHtml(item.name)} <span style="color: #6b7280;">× ${escapeHtml(item.quantity)}</span>
+              ${escapeHtml(item.name)}${item.selectedQuantity ? ` (${escapeHtml(item.selectedQuantity)})` : ''} <span style="color: #6b7280;">× ${escapeHtml(item.quantity)}</span>
             </td>
             <td style="padding: 12px 8px; border-bottom: 1px solid #e5e5e5; text-align: right; color: #374151; font-weight: 500;">
               ₹${escapeHtml(item.subtotal ?? ((item.unitPrice || item.basePrice) * item.quantity))}
@@ -140,14 +140,22 @@ export const sendAdminOrderNotification = async (orderData, settings = {}) => {
 
     const { customer, orderNumber, items, pricing, payment } = orderData
     const fromEmail = process.env.EMAIL_USER
-    const adminEmail = settings.businessEmail || fromEmail
     const brandName = settings.brandName || 'Healthy Oats'
+    
+    // Parse multiple admin emails from environment variable
+    const adminEmails = (process.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map(e => e.trim())
+      .filter(Boolean)
+    
+    // Fallback to settings.businessEmail or fromEmail if no ADMIN_EMAILS configured
+    const toEmail = adminEmails.length > 0 ? adminEmails.join(',') : (settings.businessEmail || fromEmail)
 
     const itemsRows = items
       .map((item) => `
         <tr>
           <td style="padding: 10px 8px; border-bottom: 1px solid #e5e5e5; color: #374151;">
-            ${escapeHtml(item.name)} × ${escapeHtml(item.quantity)}
+            ${escapeHtml(item.name)}${item.selectedQuantity ? ` (${escapeHtml(item.selectedQuantity)})` : ''} × ${escapeHtml(item.quantity)}
           </td>
           <td style="padding: 10px 8px; border-bottom: 1px solid #e5e5e5; text-align: right; color: #374151;">
             ₹${escapeHtml(item.subtotal ?? item.basePrice * item.quantity)}
@@ -208,7 +216,7 @@ export const sendAdminOrderNotification = async (orderData, settings = {}) => {
 
     await transporter.sendMail({
       from: `"${brandName} Orders" <${fromEmail}>`,
-      to: adminEmail,
+      to: toEmail,
       subject: `New Order #${orderNumber}`,
       html: emailHtml,
     })

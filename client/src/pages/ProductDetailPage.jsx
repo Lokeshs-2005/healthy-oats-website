@@ -15,6 +15,8 @@ const ProductDetailPage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [quantity, setQuantity] = useState(1)
+  const [selectedTier, setSelectedTier] = useState(null)
+  const [mainImage, setMainImage] = useState('')
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -29,6 +31,13 @@ const ProductDetailPage = () => {
       const productRes = await publicApi.getProductBySlug(slug)
       
       setProduct(productRes.data)
+      setMainImage(productRes.data.imageUrl)
+      
+      // Set initial tier if pricing tiers exist
+      if (productRes.data.pricingTiers && productRes.data.pricingTiers.length > 0) {
+        setSelectedTier(productRes.data.pricingTiers[0])
+      }
+      
       document.title = `${productRes.data.name} - Healthy Oats`
     } catch (err) {
       setError(err.message)
@@ -38,12 +47,16 @@ const ProductDetailPage = () => {
   }
 
   const handleAddToCart = () => {
-    addToCart(product, quantity, [])
+    addToCart(product, quantity, selectedTier)
   }
 
   const handleBuyNow = () => {
-    addToCart(product, quantity, [])
+    addToCart(product, quantity, selectedTier)
     navigate('/checkout')
+  }
+
+  const getCurrentPrice = () => {
+    return selectedTier ? selectedTier.price : product.basePrice
   }
 
   const incrementQuantity = () => setQuantity(q => q + 1)
@@ -83,10 +96,10 @@ const ProductDetailPage = () => {
         <div className="grid md:grid-cols-2 gap-12">
           {/* Product Image */}
           <div>
-            <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden">
-              {product.imageUrl ? (
+            <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden mb-4">
+              {mainImage ? (
                 <img
-                  src={product.imageUrl}
+                  src={mainImage}
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />
@@ -96,6 +109,39 @@ const ProductDetailPage = () => {
                 </div>
               )}
             </div>
+            
+            {/* Additional Images Thumbnails */}
+            {product.additionalImages && product.additionalImages.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto">
+                <button
+                  onClick={() => setMainImage(product.imageUrl)}
+                  className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
+                    mainImage === product.imageUrl ? 'border-deep-green' : 'border-gray-200'
+                  }`}
+                >
+                  <img
+                    src={product.imageUrl}
+                    alt="Main"
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+                {product.additionalImages.map((img, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setMainImage(img)}
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
+                      mainImage === img ? 'border-deep-green' : 'border-gray-200'
+                    }`}
+                  >
+                    <img
+                      src={img}
+                      alt={`Additional ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}
@@ -106,13 +152,31 @@ const ProductDetailPage = () => {
             
             <div className="mb-6">
               <span className="text-4xl font-bold text-deep-green">
-                {CURRENCY_SYMBOL}{product.basePrice}
+                {CURRENCY_SYMBOL}{getCurrentPrice()}
               </span>
             </div>
 
             {!product.isAvailable && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                 <p className="text-red-700 font-medium">Currently Unavailable</p>
+              </div>
+            )}
+
+            {/* Pricing Tier Selector */}
+            {product.pricingTiers && product.pricingTiers.length > 0 && (
+              <div className="mb-6">
+                <label className="block font-semibold mb-2">Select Size:</label>
+                <select
+                  value={selectedTier ? JSON.stringify(selectedTier) : ''}
+                  onChange={(e) => setSelectedTier(JSON.parse(e.target.value))}
+                  className="input w-full md:w-auto"
+                >
+                  {product.pricingTiers.map((tier, index) => (
+                    <option key={index} value={JSON.stringify(tier)}>
+                      {tier.quantity} – {CURRENCY_SYMBOL}{tier.price}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
 
@@ -156,7 +220,7 @@ const ProductDetailPage = () => {
                     className="btn-primary flex-1 flex items-center justify-center gap-2"
                   >
                     <ShoppingCart size={20} />
-                    Buy Now - {CURRENCY_SYMBOL}{product.basePrice * quantity}
+                    Buy Now - {CURRENCY_SYMBOL}{getCurrentPrice() * quantity}
                   </button>
 
                   <button

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Package, FolderTree, Plus, Eye, EyeOff, Star } from 'lucide-react'
+import { Package, Eye, EyeOff, Star } from 'lucide-react'
 import { publicApi } from '../../services/api'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import ErrorMessage from '../../components/ErrorMessage'
@@ -11,8 +11,6 @@ const AdminDashboard = () => {
     availableProducts: 0,
     unavailableProducts: 0,
     featuredProducts: 0,
-    totalCategories: 0,
-    totalAddOns: 0,
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -26,23 +24,15 @@ const AdminDashboard = () => {
       setLoading(true)
       setError(null)
 
-      const [productsRes, categoriesRes, addOnsRes] = await Promise.all([
-        publicApi.getProducts(),
-        publicApi.getCategories(),
-        publicApi.getAddOns(),
-      ])
+      const productsRes = await publicApi.getProducts()
 
       const products = productsRes.data || []
-      const categories = categoriesRes.data || []
-      const addOns = addOnsRes.data || []
 
       setStats({
         totalProducts: products.length,
         availableProducts: products.filter((p) => p.isAvailable).length,
         unavailableProducts: products.filter((p) => !p.isAvailable).length,
         featuredProducts: products.filter((p) => p.isFeatured).length,
-        totalCategories: categories.length,
-        totalAddOns: addOns.length,
       })
     } catch (err) {
       setError(err.message)
@@ -92,20 +82,6 @@ const AdminDashboard = () => {
       color: 'bg-yellow-500',
       link: '/admin/products',
     },
-    {
-      title: 'Categories',
-      value: stats.totalCategories,
-      icon: FolderTree,
-      color: 'bg-purple-500',
-      link: '/admin/categories',
-    },
-    {
-      title: 'Add-ons',
-      value: stats.totalAddOns,
-      icon: Plus,
-      color: 'bg-orange-500',
-      link: '/admin/addons',
-    },
   ]
 
   return (
@@ -139,15 +115,9 @@ const AdminDashboard = () => {
       {/* Quick Actions */}
       <div className="card p-6">
         <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid sm:grid-cols-2 gap-4">
           <Link to="/admin/products" className="btn-primary text-center">
             Manage Products
-          </Link>
-          <Link to="/admin/categories" className="btn-primary text-center">
-            Manage Categories
-          </Link>
-          <Link to="/admin/addons" className="btn-primary text-center">
-            Manage Add-ons
           </Link>
           <Link to="/admin/settings" className="btn-primary text-center">
             Update Settings

@@ -129,7 +129,21 @@ const ProductCard = ({ product }) => {
 
   const handleAddToCart = (e) => {
     e.preventDefault() // Prevent navigation to product detail page
-    addToCart(product, 1)
+    
+    // If product has pricing tiers, use the first one
+    const selectedTier = product.pricingTiers && product.pricingTiers.length > 0 
+      ? product.pricingTiers[0] 
+      : null
+    
+    addToCart(product, 1, selectedTier)
+  }
+
+  const getDisplayPrice = () => {
+    if (product.pricingTiers && product.pricingTiers.length > 0) {
+      const minPrice = Math.min(...product.pricingTiers.map(t => t.price))
+      return `from ${CURRENCY_SYMBOL}${minPrice}`
+    }
+    return `${CURRENCY_SYMBOL}${product.basePrice}`
   }
 
   return (
@@ -152,7 +166,7 @@ const ProductCard = ({ product }) => {
         </p>
         <div className="flex justify-between items-center mb-3">
           <span className="text-xl font-bold text-deep-green">
-            {CURRENCY_SYMBOL}{product.basePrice}
+            {getDisplayPrice()}
           </span>
         </div>
         {/* Add to Cart Button */}

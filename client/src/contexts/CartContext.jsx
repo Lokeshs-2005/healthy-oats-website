@@ -12,10 +12,13 @@ export const useCart = () => {
 }
 
 export const getItemUnitPrice = (item) => {
-  return Number(item.basePrice) || 0
+  return Number(item.selectedPrice || item.basePrice) || 0
 }
 
-export const getCartItemId = (productId) => {
+export const getCartItemId = (productId, selectedTier) => {
+  if (selectedTier && selectedTier.quantity) {
+    return `${productId}:${selectedTier.quantity}`
+  }
   return String(productId)
 }
 
@@ -44,8 +47,8 @@ export const CartProvider = ({ children }) => {
     toastTimer.current = setTimeout(() => setToast(null), 2800)
   }, [])
 
-  const addToCart = useCallback((product, quantity = 1, selectedAddOns = []) => {
-    const cartItemId = getCartItemId(product.id)
+  const addToCart = useCallback((product, quantity = 1, selectedTier = null) => {
+    const cartItemId = getCartItemId(product.id, selectedTier)
     const safeQuantity = Math.min(Math.max(Number(quantity) || 1, 1), MAX_ITEM_QUANTITY)
 
     setCart((prevCart) => {
@@ -69,6 +72,8 @@ export const CartProvider = ({ children }) => {
           imageUrl: product.imageUrl,
           shortDescription: product.shortDescription,
           basePrice: product.basePrice,
+          selectedQuantity: selectedTier?.quantity || null,
+          selectedPrice: selectedTier?.price || product.basePrice,
           quantity: safeQuantity,
         },
       ]

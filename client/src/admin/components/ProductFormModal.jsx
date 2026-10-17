@@ -10,6 +10,8 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
     description: '',
     basePrice: '',
     imageUrl: '',
+    additionalImages: [],
+    pricingTiers: [],
     isAvailable: true,
   })
   
@@ -23,6 +25,8 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
         description: product.description || '',
         basePrice: product.basePrice || '',
         imageUrl: product.imageUrl || '',
+        additionalImages: product.additionalImages || [],
+        pricingTiers: product.pricingTiers || [],
         isAvailable: product.isAvailable !== false,
       })
     }
@@ -63,6 +67,8 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
         ...formData,
         slug: generateSlug(formData.name),
         basePrice: parseFloat(formData.basePrice),
+        additionalImages: formData.additionalImages,
+        pricingTiers: formData.pricingTiers,
       }
 
       if (product) {
@@ -175,6 +181,120 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
                     <p className="text-sm text-gray-500 mt-2">Required field</p>
                   )}
                 </div>
+              </div>
+            </div>
+
+            {/* Additional Images */}
+            <div>
+              <label className="label">Additional Images (Optional)</label>
+              <div className="space-y-2">
+                {formData.additionalImages.map((url, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={url}
+                      onChange={(e) => {
+                        const newImages = [...formData.additionalImages]
+                        newImages[index] = e.target.value
+                        setFormData({ ...formData, additionalImages: newImages })
+                      }}
+                      className="input flex-1"
+                      placeholder="Enter image URL"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newImages = formData.additionalImages.filter((_, i) => i !== index)
+                        setFormData({ ...formData, additionalImages: newImages })
+                      }}
+                      className="btn-outline px-3"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                ))}
+                {formData.additionalImages.length < 5 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({ 
+                        ...formData, 
+                        additionalImages: [...formData.additionalImages, ''] 
+                      })
+                    }}
+                    className="btn-outline text-sm"
+                  >
+                    + Add Image
+                  </button>
+                )}
+                {formData.additionalImages.length >= 5 && (
+                  <p className="text-xs text-gray-500">Maximum 5 additional images</p>
+                )}
+              </div>
+            </div>
+
+            {/* Pricing Tiers */}
+            <div>
+              <label className="label">Pricing Tiers (Optional)</label>
+              <p className="text-sm text-gray-500 mb-3">
+                Add multiple quantity/price options (e.g., 250g, 500g, 1kg)
+              </p>
+              <div className="space-y-2">
+                {formData.pricingTiers.map((tier, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={tier.quantity}
+                      onChange={(e) => {
+                        const newTiers = [...formData.pricingTiers]
+                        newTiers[index] = { ...newTiers[index], quantity: e.target.value }
+                        setFormData({ ...formData, pricingTiers: newTiers })
+                      }}
+                      className="input flex-1"
+                      placeholder="e.g. 250g"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={tier.price}
+                      onChange={(e) => {
+                        const newTiers = [...formData.pricingTiers]
+                        newTiers[index] = { ...newTiers[index], price: e.target.value }
+                        setFormData({ ...formData, pricingTiers: newTiers })
+                      }}
+                      className="input w-32"
+                      placeholder="Price"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newTiers = formData.pricingTiers.filter((_, i) => i !== index)
+                        setFormData({ ...formData, pricingTiers: newTiers })
+                      }}
+                      className="btn-outline px-3"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                ))}
+                {formData.pricingTiers.length < 10 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({ 
+                        ...formData, 
+                        pricingTiers: [...formData.pricingTiers, { quantity: '', price: '' }] 
+                      })
+                    }}
+                    className="btn-outline text-sm"
+                  >
+                    + Add Tier
+                  </button>
+                )}
+                {formData.pricingTiers.length >= 10 && (
+                  <p className="text-xs text-gray-500">Maximum 10 pricing tiers</p>
+                )}
               </div>
             </div>
 

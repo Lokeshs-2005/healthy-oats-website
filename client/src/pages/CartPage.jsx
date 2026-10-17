@@ -196,6 +196,7 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
           className="font-semibold text-deep-green hover:text-sage-green transition-colors line-clamp-1"
         >
           {item.name}
+          {item.selectedQuantity && <span className="text-gray-600"> – {item.selectedQuantity}</span>}
         </Link>
         
         <p className="text-sm text-gray-600 mt-1 line-clamp-2">
