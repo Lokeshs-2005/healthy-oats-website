@@ -148,6 +148,11 @@ export const sendAdminOrderNotification = async (orderData, settings = {}) => {
       .map(e => e.trim())
       .filter(Boolean)
     
+    // Warn if ADMIN_EMAILS is misconfigured
+    if (adminEmails.length === 0) {
+      console.warn('ADMIN_EMAILS environment variable is not configured or empty. Falling back to single admin email.')
+    }
+    
     // Fallback to settings.businessEmail or fromEmail if no ADMIN_EMAILS configured
     const toEmail = adminEmails.length > 0 ? adminEmails.join(',') : (settings.businessEmail || fromEmail)
 

@@ -181,18 +181,12 @@ class OrderService {
 
       const unitPrice = Number(product.basePrice) || 0
       let selectedQuantity = item.selectedQuantity || null
-      let selectedPrice = unitPrice
-
-      // If the item has a selectedQuantity, try to match it with a pricing tier
-      if (selectedQuantity && product.pricingTiers && Array.isArray(product.pricingTiers)) {
-        const matchingTier = product.pricingTiers.find(tier => tier.quantity === selectedQuantity)
-        if (matchingTier) {
-          selectedPrice = Number(matchingTier.price) || unitPrice
-        }
-      } else if (item.selectedPrice !== undefined) {
-        // Use the selectedPrice from the cart item if available
-        selectedPrice = Number(item.selectedPrice) || unitPrice
-      }
+      
+      // Trust the selectedPrice from the cart item directly (locked at add-to-cart time)
+      // This prevents pricing errors if admin changes tier labels after items are in cart
+      let selectedPrice = item.selectedPrice !== undefined 
+        ? Number(item.selectedPrice) || unitPrice
+        : unitPrice
 
       priced.push({
         productId,
