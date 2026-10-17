@@ -117,7 +117,13 @@ export const productService = {
         products = products.filter((p) => p.isAvailable === isAvailable)
       }
 
-      products.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      // Sort by displayOrder (ascending), then by createdAt (descending) as tiebreaker
+      products.sort((a, b) => {
+        const orderA = a.displayOrder !== undefined ? a.displayOrder : 999
+        const orderB = b.displayOrder !== undefined ? b.displayOrder : 999
+        if (orderA !== orderB) return orderA - orderB
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+      })
 
       if (filters.limit) {
         return products.slice(0, parseInt(filters.limit, 10))
