@@ -1,7 +1,5 @@
 import express from 'express'
 import { productService } from '../services/productService.js'
-import { categoryService } from '../services/categoryService.js'
-import { addonService } from '../services/addonService.js'
 import { settingsService } from '../services/settingsService.js'
 import { orderService } from '../services/orderService.js'
 import { rateLimit } from '../middleware/rateLimit.js'
@@ -22,24 +20,6 @@ router.get('/products/:slug', async (req, res, next) => {
   try {
     const product = await productService.getBySlug(req.params.slug)
     res.json(product)
-  } catch (error) {
-    next(error)
-  }
-})
-
-router.get('/categories', async (req, res, next) => {
-  try {
-    const categories = await categoryService.getAll()
-    res.json(categories)
-  } catch (error) {
-    next(error)
-  }
-})
-
-router.get('/addons', async (req, res, next) => {
-  try {
-    const addons = await addonService.getAll()
-    res.json(addons)
   } catch (error) {
     next(error)
   }

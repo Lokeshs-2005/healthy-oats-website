@@ -144,24 +144,16 @@ const ProductCard = ({ product }) => {
         ) : (
           <span className="text-6xl">🥣</span>
         )}
-        {product.isFeatured && (
-          <div className="absolute top-2 right-2 bg-warm-orange text-white text-xs font-semibold px-2 py-1 rounded">
-            Featured
-          </div>
-        )}
       </div>
       <div className="p-4">
         <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
         <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-          {product.shortDescription}
+          {product.description}
         </p>
         <div className="flex justify-between items-center mb-3">
           <span className="text-xl font-bold text-deep-green">
             {CURRENCY_SYMBOL}{product.basePrice}
           </span>
-          {product.servingSize && (
-            <span className="text-sm text-gray-500">{product.servingSize}</span>
-          )}
         </div>
         {/* Add to Cart Button */}
         <button

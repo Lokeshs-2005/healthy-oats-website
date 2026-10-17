@@ -14,18 +14,15 @@ const slugify = (value) =>
 const sanitizeProduct = (data = {}, { isUpdate = false } = {}) => {
   const name = trimString(data.name, 120)
   const slug = slugify(data.slug || data.name)
-  const shortDescription = trimString(data.shortDescription, 240)
   const description = trimString(data.description, 4000)
   const basePrice = Number(data.basePrice)
+  const imageUrl = trimString(data.imageUrl, 500)
 
   if (!isUpdate || data.name !== undefined) {
     if (name.length < 2) throw new AppError('Product name is required', 400)
   }
   if (!isUpdate || data.slug !== undefined || data.name !== undefined) {
     if (!slug) throw new AppError('Product slug is required', 400)
-  }
-  if (!isUpdate || data.shortDescription !== undefined) {
-    if (!shortDescription) throw new AppError('Short description is required', 400)
   }
   if (!isUpdate || data.description !== undefined) {
     if (!description) throw new AppError('Description is required', 400)
@@ -35,44 +32,25 @@ const sanitizeProduct = (data = {}, { isUpdate = false } = {}) => {
       throw new AppError('A valid price is required', 400)
     }
   }
+  if (!isUpdate || data.imageUrl !== undefined) {
+    if (!imageUrl) throw new AppError('Product image is required', 400)
+  }
 
   const product = {
     name,
     slug,
-    shortDescription,
     description,
-    categoryId: trimString(data.categoryId, 80),
     basePrice,
-    servingSize: trimString(data.servingSize, 40),
-    ingredients: trimString(data.ingredients, 2000),
-    allergens: trimString(data.allergens, 500),
-    storageInstructions: trimString(data.storageInstructions, 500),
-    imageUrl: trimString(data.imageUrl, 500),
-    additionalImages: Array.isArray(data.additionalImages)
-      ? data.additionalImages.map((url) => trimString(url, 500)).filter(Boolean).slice(0, 8)
-      : [],
-    addOnIds: Array.isArray(data.addOnIds) ? data.addOnIds.map(String).slice(0, 50) : [],
-    isFeatured: Boolean(data.isFeatured),
+    imageUrl,
     isAvailable: data.isAvailable !== false,
-    nutritionalInfo: trimString(data.nutritionalInfo, 2000),
-    labels: trimString(data.labels, 200),
   }
 
   if (isUpdate) {
     const allowed = {}
-    const keys = Object.keys(product)
-    keys.forEach((key) => {
-      if (data[key] !== undefined || ['slug', 'name', 'basePrice', 'shortDescription', 'description'].includes(key) && data[key] !== undefined) {
-        if (data[key] !== undefined || (key === 'slug' && (data.slug !== undefined || data.name !== undefined))) {
-          allowed[key] = product[key]
-        }
-      }
-    })
-    ;['isFeatured', 'isAvailable', 'additionalImages', 'addOnIds'].forEach((key) => {
-      if (data[key] !== undefined) allowed[key] = product[key]
-    })
     Object.keys(product).forEach((key) => {
-      if (data[key] !== undefined) allowed[key] = product[key]
+      if (data[key] !== undefined || (key === 'slug' && data.name !== undefined)) {
+        allowed[key] = product[key]
+      }
     })
     return allowed
   }
@@ -93,15 +71,6 @@ export const productService = {
       snapshot.forEach((doc) => {
         products.push({ id: doc.id, ...doc.data() })
       })
-
-      if (filters.categoryId) {
-        products = products.filter((p) => p.categoryId === filters.categoryId)
-      }
-
-      if (filters.featured !== undefined) {
-        const isFeatured = filters.featured === 'true' || filters.featured === true
-        products = products.filter((p) => p.isFeatured === isFeatured)
-      }
 
       if (filters.available !== undefined) {
         const isAvailable = filters.available === 'true' || filters.available === true

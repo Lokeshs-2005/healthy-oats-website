@@ -44,12 +44,6 @@ export const publicApi = {
   getProducts: (params) => api.get('/api/products', { params }),
   getProductBySlug: (slug) => api.get(`/api/products/${slug}`),
   
-  // Categories
-  getCategories: () => api.get('/api/categories'),
-  
-  // Add-ons
-  getAddOns: () => api.get('/api/addons'),
-  
   // Site Settings
   getSiteSettings: () => api.get('/api/site-settings'),
   
@@ -64,16 +58,6 @@ export const adminApi = {
   createProduct: (data) => api.post('/api/admin/products', data),
   updateProduct: (id, data) => api.put(`/api/admin/products/${id}`, data),
   deleteProduct: (id) => api.delete(`/api/admin/products/${id}`),
-  
-  // Categories
-  createCategory: (data) => api.post('/api/admin/categories', data),
-  updateCategory: (id, data) => api.put(`/api/admin/categories/${id}`, data),
-  deleteCategory: (id) => api.delete(`/api/admin/categories/${id}`),
-  
-  // Add-ons
-  createAddOn: (data) => api.post('/api/admin/addons', data),
-  updateAddOn: (id, data) => api.put(`/api/admin/addons/${id}`, data),
-  deleteAddOn: (id) => api.delete(`/api/admin/addons/${id}`),
   
   // Site Settings
   updateSiteSettings: (data) => api.put('/api/admin/site-settings', data),

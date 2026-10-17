@@ -2,8 +2,6 @@ import express from 'express'
 import multer from 'multer'
 import { authenticate } from '../middleware/auth.js'
 import { productService } from '../services/productService.js'
-import { categoryService } from '../services/categoryService.js'
-import { addonService } from '../services/addonService.js'
 import { settingsService } from '../services/settingsService.js'
 import { orderService } from '../services/orderService.js'
 import { cloudinary, isConfigured } from '../config/cloudinary.js'
@@ -50,62 +48,6 @@ router.put('/products/:id', async (req, res, next) => {
 router.delete('/products/:id', async (req, res, next) => {
   try {
     await productService.delete(req.params.id)
-    res.json({ success: true })
-  } catch (error) {
-    next(error)
-  }
-})
-
-// Categories
-router.post('/categories', async (req, res, next) => {
-  try {
-    const category = await categoryService.create(req.body)
-    res.status(201).json(category)
-  } catch (error) {
-    next(error)
-  }
-})
-
-router.put('/categories/:id', async (req, res, next) => {
-  try {
-    const category = await categoryService.update(req.params.id, req.body)
-    res.json(category)
-  } catch (error) {
-    next(error)
-  }
-})
-
-router.delete('/categories/:id', async (req, res, next) => {
-  try {
-    await categoryService.delete(req.params.id)
-    res.json({ success: true })
-  } catch (error) {
-    next(error)
-  }
-})
-
-// Add-ons
-router.post('/addons', async (req, res, next) => {
-  try {
-    const addon = await addonService.create(req.body)
-    res.status(201).json(addon)
-  } catch (error) {
-    next(error)
-  }
-})
-
-router.put('/addons/:id', async (req, res, next) => {
-  try {
-    const addon = await addonService.update(req.params.id, req.body)
-    res.json(addon)
-  } catch (error) {
-    next(error)
-  }
-})
-
-router.delete('/addons/:id', async (req, res, next) => {
-  try {
-    await addonService.delete(req.params.id)
     res.json({ success: true })
   } catch (error) {
     next(error)

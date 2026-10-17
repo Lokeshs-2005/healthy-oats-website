@@ -9,26 +9,15 @@ import EmptyState from '../components/EmptyState'
 const CartPage = () => {
   const navigate = useNavigate()
   const { cart, updateQuantity, removeFromCart, getCartTotal, getCartCount } = useCart()
-  const [addOns, setAddOns] = useState([])
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
 
   // Scroll to top when component mounts
   useEffect(() => {
     window.scrollTo(0, 0)
-    loadAddOns()
     publicApi.getSiteSettings()
       .then((response) => setSettings({ ...DEFAULT_SETTINGS, ...response.data }))
       .catch(() => {})
   }, [])
-
-  const loadAddOns = async () => {
-    try {
-      const response = await publicApi.getAddOns()
-      setAddOns(response.data || [])
-    } catch (error) {
-      console.error('Failed to load add-ons:', error)
-    }
-  }
 
   const subtotal = getCartTotal()
   const deliveryCharge = getDeliveryCharge(subtotal, settings)
@@ -79,54 +68,6 @@ const CartPage = () => {
                 onRemove={removeFromCart}
               />
             ))}
-
-            {/* Available Add-ons Section */}
-            {addOns.length > 0 && (
-              <div className="card p-6 bg-gradient-to-br from-sage-green/5 to-warm-orange/5 border-2 border-dashed border-sage-green/30">
-                <h3 className="text-xl font-bold text-deep-green mb-3 flex items-center gap-2">
-                  ✨ Enhance Your Order with Add-ons
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Add these delicious extras to complement your order!
-                </p>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {addOns.filter(addon => addon.isAvailable).slice(0, 6).map((addon) => (
-                    <div
-                      key={addon.id}
-                      className="bg-white rounded-lg p-4 border border-gray-200 hover:border-sage-green hover:shadow-md transition-all group"
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
-                          <p className="font-semibold text-deep-green">
-                            {addon.name}
-                          </p>
-                          {addon.description && (
-                            <p className="text-xs text-gray-600 mt-1 line-clamp-2">{addon.description}</p>
-                          )}
-                        </div>
-                        {addon.additionalPrice > 0 && (
-                          <span className="text-sage-green font-bold ml-2 text-sm">
-                            +{CURRENCY_SYMBOL}{addon.additionalPrice}
-                          </span>
-                        )}
-                      </div>
-                      <Link
-                        to="/menu"
-                        className="text-xs text-sage-green font-medium flex items-center gap-1 hover:gap-2 transition-all"
-                      >
-                        <span>Browse Products with this Add-on</span>
-                        <ArrowRight size={14} />
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 bg-amber-50 border-l-4 border-amber-500 p-3 rounded">
-                  <p className="text-xs text-amber-800">
-                    <strong>Tip:</strong> Open a product from the menu and tap extras there. They will show up on that item in your cart.
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Order Summary */}
@@ -257,16 +198,9 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
           {item.name}
         </Link>
         
-        {item.shortDescription && (
-          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-            {item.shortDescription}
-          </p>
-        )}
-        {item.selectedAddOns?.length > 0 && (
-          <p className="text-xs text-sage-green mt-1">
-            Add-ons: {item.selectedAddOns.map((addon) => addon.name).join(', ')}
-          </p>
-        )}
+        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+          {item.description}
+        </p>
 
         <div className="flex items-center justify-between mt-4">
           {/* Quantity Controls */}
