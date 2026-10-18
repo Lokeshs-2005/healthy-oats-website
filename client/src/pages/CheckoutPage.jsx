@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, User, MapPin, ShoppingBag, CreditCard } from 'lucide-react'
 import { useCart, getItemUnitPrice } from '../contexts/CartContext'
 import { publicApi, getApiError } from '../services/api'
-import { CURRENCY_SYMBOL, DEFAULT_SETTINGS, getDeliveryCharge } from '../config/constants'
+import { CURRENCY_SYMBOL, DEFAULT_SETTINGS } from '../config/constants'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 const getIdempotencyKey = () => {
@@ -32,8 +32,12 @@ const CheckoutPage = () => {
     state: '',
     pincode: '',
     paymentMethod: 'cod', // 'cod' or 'upi'
-    notes: ''
+    notes: '',
+    shareLocation: false,
+    latitude: null,
+    longitude: null
   })
+  const [locationError, setLocationError] = useState('')
 
   useEffect(() => {
     document.title = 'Checkout - Healthy Oats'
@@ -48,12 +52,52 @@ const CheckoutPage = () => {
   }, [cart, navigate])
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    const { name, value, type, checked } = e.target
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }))
     
     // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }))
+    }
+  }
+
+  const handleLocationShare = () => {
+    if (!formData.shareLocation) {
+      // User wants to share location
+      setLocationError('')
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setFormData(prev => ({
+              ...prev,
+              shareLocation: true,
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            }))
+            setLocationError('')
+          },
+          (error) => {
+            console.error('Geolocation error:', error)
+            setLocationError('Unable to get location. Please enable location services.')
+            setFormData(prev => ({ ...prev, shareLocation: false }))
+          }
+        )
+      } else {
+        setLocationError('Location sharing not supported by your browser.')
+        setFormData(prev => ({ ...prev, shareLocation: false }))
+      }
+    } else {
+      // User wants to unshare location
+      setFormData(prev => ({
+        ...prev,
+        shareLocation: false,
+        latitude: null,
+        longitude: null
+      }))
+      setLocationError('')
     }
   }
 
@@ -99,6 +143,10 @@ const CheckoutPage = () => {
       newErrors.pincode = 'Pincode must be 6 digits'
     }
 
+    if (!formData.shareLocation) {
+      newErrors.shareLocation = 'Please share your location for accurate delivery'
+    }
+
     setErrors(newErrors)
     if (Object.keys(newErrors).length > 0) {
       const firstField = document.getElementById(Object.keys(newErrors)[0])
@@ -128,8 +176,8 @@ const CheckoutPage = () => {
 
     try {
       const subtotal = getCartTotal()
-      const deliveryCharge = getDeliveryCharge(subtotal, settings)
-      const total = subtotal + deliveryCharge
+      const deliveryCharge = 0 // Free delivery
+      const total = subtotal
       const pricing = { subtotal, deliveryCharge, total }
       persistCheckoutData(pricing)
 
@@ -146,6 +194,8 @@ const CheckoutPage = () => {
             city: formData.city,
             state: formData.state,
             pincode: formData.pincode,
+            latitude: formData.latitude,
+            longitude: formData.longitude,
           },
           items: cart,
           pricing,
@@ -175,9 +225,7 @@ const CheckoutPage = () => {
   }
 
   const subtotal = getCartTotal()
-  const deliveryCharge = getDeliveryCharge(subtotal, settings)
-  const total = subtotal + deliveryCharge
-  const freeFrom = Number(settings.freeDeliveryThreshold) || 500
+  const total = subtotal // Free delivery, no additional charges
 
   return (
     <div className="min-h-screen py-16 bg-gray-50">
@@ -255,7 +303,7 @@ const CheckoutPage = () => {
                         value={formData.phone}
                         onChange={handleInputChange}
                         className={`input ${errors.phone ? 'border-red-500' : ''}`}
-                        placeholder="+91 9876543210 or 9876543210"
+                        placeholder="+91 9876543210"
                       />
                       {errors.phone && (
                         <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
@@ -288,6 +336,36 @@ const CheckoutPage = () => {
                     />
                     {errors.address && (
                       <p className="text-red-500 text-sm mt-1">{errors.address}</p>
+                    )}
+                  </div>
+
+                  {/* Location Sharing */}
+                  <div className="border-t pt-4">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.shareLocation}
+                        onChange={handleLocationShare}
+                        className="mt-1 w-5 h-5 text-deep-green focus:ring-deep-green rounded"
+                      />
+                      <div className="flex-1">
+                        <span className="font-medium text-deep-green">
+                          Share Live Location *
+                        </span>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Share your exact location for accurate delivery
+                        </p>
+                        {formData.shareLocation && formData.latitude && (
+                          <p className="text-xs text-green-600 mt-1 font-medium">
+                            ✓ Location captured successfully
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                    {(errors.shareLocation || locationError) && (
+                      <p className="text-red-500 text-sm mt-2">
+                        {errors.shareLocation || locationError}
+                      </p>
                     )}
                   </div>
 
@@ -476,21 +554,15 @@ const CheckoutPage = () => {
                   <span className="font-semibold">{CURRENCY_SYMBOL}{subtotal}</span>
                 </div>
                 
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Delivery Charge</span>
-                  <span className="font-semibold">
-                    {deliveryCharge === 0 ? (
-                      <span className="text-green-600 font-bold">FREE</span>
-                    ) : (
-                      `${CURRENCY_SYMBOL}${deliveryCharge}`
-                    )}
-                  </span>
+                <div className="flex justify-between items-center py-2 bg-green-50 -mx-6 px-6 border-y border-green-100">
+                  <span className="text-green-700 font-medium text-sm">🚚 Delivery</span>
+                  <span className="text-green-700 font-bold text-base">FREE</span>
                 </div>
 
-                <div className="border-t border-gray-300 pt-4 mt-3">
+                <div className="pt-2">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold text-gray-900">Total</span>
-                    <span className="text-3xl font-bold text-deep-green">{CURRENCY_SYMBOL}{total}</span>
+                    <span className="text-3xl font-bold text-deep-green">{CURRENCY_SYMBOL}{subtotal}</span>
                   </div>
                 </div>
               </div>

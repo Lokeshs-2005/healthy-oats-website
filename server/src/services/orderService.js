@@ -117,6 +117,8 @@ class OrderService {
     const city = trimString(input.city, 80)
     const state = trimString(input.state, 80)
     const pincode = digitsOnly(input.pincode)
+    const latitude = input.latitude ? Number(input.latitude) : null
+    const longitude = input.longitude ? Number(input.longitude) : null
 
     if (fullName.length < 2) throw new AppError('Full name is required', 400)
     if (!isValidEmail(email)) throw new AppError('A valid email is required', 400)
@@ -131,7 +133,7 @@ class OrderService {
     if (!state) throw new AppError('State is required', 400)
     if (pincode.length !== 6) throw new AppError('Pincode must be 6 digits', 400)
 
-    return {
+    const customerData = {
       fullName,
       email,
       phone: phoneDigits,
@@ -142,6 +144,14 @@ class OrderService {
         pincode,
       },
     }
+
+    // Add location if provided
+    if (latitude !== null && longitude !== null) {
+      customerData.latitude = latitude
+      customerData.longitude = longitude
+    }
+
+    return customerData
   }
 
   async #priceItems(rawItems) {

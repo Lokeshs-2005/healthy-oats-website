@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer'
+import { createTransport } from 'nodemailer'
 import { escapeHtml } from '../utils/sanitize.js'
 
 const createTransporter = () => {
@@ -8,13 +8,14 @@ const createTransporter = () => {
   }
 
   try {
-    return nodemailer.createTransporter({
+    const transporter = createTransport({
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_APP_PASSWORD,
       },
     })
+    return transporter
   } catch (error) {
     console.error('Failed to create email transporter:', error)
     return null
@@ -31,15 +32,19 @@ const formatAddress = (customer) => {
 
 export const sendOrderConfirmationEmail = async (orderData, settings = {}) => {
   try {
+    console.log('[EMAIL] Attempting to send customer confirmation email...')
     const transporter = createTransporter()
 
     if (!transporter) {
+      console.log('[EMAIL] Transporter creation failed - email not configured')
       return { success: false, error: 'Email not configured' }
     }
 
     const { customer, orderNumber, items, pricing } = orderData
     const fromEmail = process.env.EMAIL_USER
     const brandName = settings.brandName || 'Healthy Oats'
+    
+    console.log(`[EMAIL] Sending to customer: ${customer.email}`)
 
     const itemsRows = items
       .map(
@@ -113,18 +118,22 @@ export const sendOrderConfirmationEmail = async (orderData, settings = {}) => {
       html: emailHtml,
     })
 
+    console.log(`[EMAIL] ✓ Customer email sent successfully to ${customer.email}`)
     return { success: true }
   } catch (error) {
-    console.error('Email sending error:', error)
+    console.error('[EMAIL] ✗ Customer email error:', error.message)
+    console.error('[EMAIL] Full error:', error)
     return { success: false, error: error.message }
   }
 }
 
 export const sendAdminOrderNotification = async (orderData, settings = {}) => {
   try {
+    console.log('[EMAIL] Attempting to send admin notification email...')
     const transporter = createTransporter()
 
     if (!transporter) {
+      console.log('[EMAIL] Transporter creation failed - email not configured')
       return { success: false, error: 'Email not configured' }
     }
 
@@ -134,6 +143,16 @@ export const sendAdminOrderNotification = async (orderData, settings = {}) => {
     
     // Send to the configured admin email
     const adminEmail = process.env.EMAIL_USER
+    
+    // Generate Google Maps link if location is shared
+    const mapsLink = customer.latitude && customer.longitude
+      ? `https://www.google.com/maps?q=${customer.latitude},${customer.longitude}`
+      : null
+    
+    console.log(`[EMAIL] Sending to admin: ${adminEmail}`)
+    if (mapsLink) {
+      console.log(`[EMAIL] Location shared - Maps link included`)
+    }
 
     const itemsRows = items
       .map((item) => `
@@ -178,6 +197,16 @@ export const sendAdminOrderNotification = async (orderData, settings = {}) => {
                     <td style="padding: 6px 0; font-weight: 600;">Address</td>
                     <td style="padding: 6px 0;">${formatAddress(customer)}</td>
                   </tr>
+                  ${mapsLink ? `
+                  <tr>
+                    <td style="padding: 6px 0; font-weight: 600;">📍 Location</td>
+                    <td style="padding: 6px 0;">
+                      <a href="${mapsLink}" target="_blank" style="color: #2563eb; text-decoration: none; background: #eff6ff; padding: 4px 12px; border-radius: 4px; display: inline-block; font-weight: 500;">
+                        View on Google Maps →
+                      </a>
+                    </td>
+                  </tr>
+                  ` : ''}
                   <tr>
                     <td style="padding: 6px 0; font-weight: 600;">Payment</td>
                     <td style="padding: 6px 0;">${escapeHtml(String(payment.method || '').toUpperCase())}</td>
@@ -205,9 +234,11 @@ export const sendAdminOrderNotification = async (orderData, settings = {}) => {
       html: emailHtml,
     })
 
+    console.log(`[EMAIL] ✓ Admin email sent successfully to ${adminEmail}`)
     return { success: true }
   } catch (error) {
-    console.error('Admin email error:', error)
+    console.error('[EMAIL] ✗ Admin email error:', error.message)
+    console.error('[EMAIL] Full error:', error)
     return { success: false, error: error.message }
   }
 }
