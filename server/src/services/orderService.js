@@ -46,17 +46,11 @@ class OrderService {
       }
 
       const settings = await settingsService.get()
-      const freeThreshold = Number(settings.freeDeliveryThreshold) >= 0
-        ? Number(settings.freeDeliveryThreshold)
-        : 500
-      const deliveryFee = Number(settings.deliveryCharge) >= 0
-        ? Number(settings.deliveryCharge)
-        : 50
 
       const items = await this.#priceItems(orderData.items)
       const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0)
-      const deliveryCharge = subtotal >= freeThreshold ? 0 : deliveryFee
-      const total = subtotal + deliveryCharge
+      const deliveryCharge = 0 // No delivery charges
+      const total = subtotal
 
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
       const randomNum = Math.floor(1000 + Math.random() * 9000)
@@ -126,7 +120,12 @@ class OrderService {
 
     if (fullName.length < 2) throw new AppError('Full name is required', 400)
     if (!isValidEmail(email)) throw new AppError('A valid email is required', 400)
-    if (phoneDigits.length !== 10) throw new AppError('Phone number must be 10 digits', 400)
+    
+    // Accept 10 digits (without country code) or 12 digits (with country code like 91, 1, etc.)
+    if (phoneDigits.length !== 10 && phoneDigits.length !== 12) {
+      throw new AppError('Phone number must be 10 digits or include country code', 400)
+    }
+    
     if (street.length < 5) throw new AppError('Address is required', 400)
     if (!city) throw new AppError('City is required', 400)
     if (!state) throw new AppError('State is required', 400)

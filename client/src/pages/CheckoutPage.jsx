@@ -72,8 +72,13 @@ const CheckoutPage = () => {
 
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required'
-    } else if (!/^[0-9]{10}$/.test(formData.phone.replace(/[^0-9]/g, ''))) {
-      newErrors.phone = 'Phone number must be 10 digits'
+    } else {
+      // Remove all non-digit characters for validation
+      const phoneDigits = formData.phone.replace(/[^0-9]/g, '')
+      // Accept 10 digits (without country code) or 12 digits (with country code like 91)
+      if (phoneDigits.length !== 10 && phoneDigits.length !== 12) {
+        newErrors.phone = 'Enter valid phone number (10 digits or with country code)'
+      }
     }
 
     if (!formData.address.trim()) {
@@ -250,7 +255,7 @@ const CheckoutPage = () => {
                         value={formData.phone}
                         onChange={handleInputChange}
                         className={`input ${errors.phone ? 'border-red-500' : ''}`}
-                        placeholder="10-digit mobile number"
+                        placeholder="+91 9876543210 or 9876543210"
                       />
                       {errors.phone && (
                         <p className="text-red-500 text-sm mt-1">{errors.phone}</p>

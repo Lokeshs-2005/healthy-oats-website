@@ -80,20 +80,10 @@ export const sendOrderConfirmationEmail = async (orderData, settings = {}) => {
               </table>
 
               <div style="border-top: 2px solid #e5e5e5; padding-top: 16px; margin-top: 8px;">
-                <table style="width: 100%; font-size: 14px; color: #374151;">
-                  <tr>
-                    <td style="padding: 6px 0;">Subtotal</td>
-                    <td style="text-align: right;">₹${escapeHtml(pricing.subtotal)}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 6px 0;">Delivery</td>
-                    <td style="text-align: right; color: ${pricing.deliveryCharge === 0 ? '#059669' : '#374151'}; font-weight: ${pricing.deliveryCharge === 0 ? '600' : '400'};">
-                      ${pricing.deliveryCharge === 0 ? 'FREE' : `₹${escapeHtml(pricing.deliveryCharge)}`}
-                    </td>
-                  </tr>
+                <table style="width: 100%; font-size: 16px; color: #374151;">
                   <tr style="font-size: 18px; font-weight: 600;">
-                    <td style="padding: 12px 0 0 0; border-top: 1px solid #e5e5e5;">Total</td>
-                    <td style="text-align: right; padding: 12px 0 0 0; border-top: 1px solid #e5e5e5; color: #2d5f3f;">₹${escapeHtml(pricing.total)}</td>
+                    <td style="padding: 12px 0;">Total</td>
+                    <td style="text-align: right; color: #2d5f3f;">₹${escapeHtml(pricing.total)}</td>
                   </tr>
                 </table>
               </div>
@@ -142,19 +132,8 @@ export const sendAdminOrderNotification = async (orderData, settings = {}) => {
     const fromEmail = process.env.EMAIL_USER
     const brandName = settings.brandName || 'Healthy Oats'
     
-    // Parse multiple admin emails from environment variable
-    const adminEmails = (process.env.ADMIN_EMAILS || '')
-      .split(',')
-      .map(e => e.trim())
-      .filter(Boolean)
-    
-    // Warn if ADMIN_EMAILS is misconfigured
-    if (adminEmails.length === 0) {
-      console.warn('ADMIN_EMAILS environment variable is not configured or empty. Falling back to single admin email.')
-    }
-    
-    // Fallback to settings.businessEmail or fromEmail if no ADMIN_EMAILS configured
-    const toEmail = adminEmails.length > 0 ? adminEmails.join(',') : (settings.businessEmail || fromEmail)
+    // Send to the configured admin email
+    const adminEmail = process.env.EMAIL_USER
 
     const itemsRows = items
       .map((item) => `
@@ -221,7 +200,7 @@ export const sendAdminOrderNotification = async (orderData, settings = {}) => {
 
     await transporter.sendMail({
       from: `"${brandName} Orders" <${fromEmail}>`,
-      to: toEmail,
+      to: adminEmail,
       subject: `New Order #${orderNumber}`,
       html: emailHtml,
     })
